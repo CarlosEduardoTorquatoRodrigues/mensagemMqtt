@@ -1,0 +1,17 @@
+{
+  "name": "MensagemMQTT — Node 20",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
+  "forwardPorts": [8081, 19006],
+  "portsAttributes": {
+    "8081": { "label": "Expo / Metro" },
+    "19006": { "label": "Expo Web" }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "GitHub.copilot",
+        "GitHub.copilot-chat"
+      ]
+    }
+  }
+}
