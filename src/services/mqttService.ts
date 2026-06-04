@@ -17,6 +17,7 @@ const statusListeners = new Set<(status: ConnectionStatus) => void>();
 const messageListeners = new Set<(topic: string, payload: MqttPayload) => void>();
 
 function updateStatus(next: ConnectionStatus): void {
+  console.log('[mqttService] status ->', next);
   status = next;
   statusListeners.forEach((listener) => listener(next));
 }
@@ -43,7 +44,7 @@ export interface MqttService {
   disconnect(): void;
   subscribe(topic: string): void;
   unsubscribe(topic: string): void;
-  publish(topic: string, payload: MqttPayload): void;
+  publish(topic: string, payload: MqttPayload | string, options?: { retain?: boolean }): void;
   onMessage(cb: (topic: string, payload: MqttPayload) => void): () => void;
   getStatus(): ConnectionStatus;
   onStatusChange(cb: (status: ConnectionStatus) => void): () => void;
@@ -92,6 +93,7 @@ export const mqttService: MqttService = {
         });
 
         nextClient.on('reconnect', () => {
+          console.log('[mqttService] reconnect event');
           updateStatus('connecting');
         });
 
@@ -99,11 +101,12 @@ export const mqttService: MqttService = {
           updateStatus('disconnected');
         });
 
-        nextClient.on('error', () => {
+        nextClient.on('error', (err) => {
+          console.log('[mqttService] error', err && (err as Error).message ? (err as Error).message : err);
           updateStatus('error');
           if (!hasConnected && !settled) {
             settled = true;
-            reject(createAppError('CONNECTION_FAILED', 'Falha ao conectar ao broker')); 
+            reject(createAppError('CONNECTION_FAILED', 'Falha ao conectar ao broker'));
           }
         });
 
@@ -135,8 +138,9 @@ export const mqttService: MqttService = {
     client?.unsubscribe(topic);
   },
 
-  publish(topic: string, payload: MqttPayload): void {
-    client?.publish(topic, JSON.stringify(payload));
+  publish(topic: string, payload: MqttPayload | string, options?: { retain?: boolean }): void {
+    const data = typeof payload === 'string' ? payload : JSON.stringify(payload);
+    client?.publish(topic, data, { retain: !!options?.retain });
   },
 
   onMessage(cb: (topic: string, payload: MqttPayload) => void): () => void {

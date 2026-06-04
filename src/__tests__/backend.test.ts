@@ -1,8 +1,7 @@
 import { EventEmitter } from 'events';
 
-let uuidCounter = 0;
-
 jest.mock('expo-crypto', () => {
+  let uuidCounter = 0;
   return {
     __esModule: true,
     randomUUID: jest.fn(() => `uuid-${++uuidCounter}`),
@@ -214,7 +213,6 @@ jest.mock('mqtt', () => mockMqtt);
 describe('Back-end module', () => {
   beforeEach(() => {
     jest.resetModules();
-    uuidCounter = 0;
     mockSQLite.__resetMock();
     mockSQLite.openDatabaseAsync.mockClear();
     mockSQLite.__mockDb.execAsync.mockClear();
@@ -354,6 +352,90 @@ describe('Back-end module', () => {
 
       const messages = await messageRepository.findByConversation('conv-1');
       expect(messages.map((message: { body: string }) => message.body)).toEqual(['Primeira', 'Segunda']);
+    });
+
+    it('deleteByConversation removes all messages from conversation', async () => {
+      const { messageRepository } = require('../repositories/messageRepository');
+      const { conversationRepository } = require('../repositories/conversationRepository');
+
+      const conversation = await conversationRepository.create({ name: 'Sala', topic: 'sala/futebol' });
+      await messageRepository.create({
+        conversationId: conversation.id,
+        sender: 'Alice',
+        body: 'Mensagem 1',
+        direction: 'sent',
+      });
+      await messageRepository.create({
+        conversationId: conversation.id,
+        sender: 'Bob',
+        body: 'Mensagem 2',
+        direction: 'received',
+      });
+
+      await messageRepository.deleteByConversation(conversation.id);
+      const messages = await messageRepository.findByConversation(conversation.id);
+      expect(messages).toEqual([]);
+    });
+
+    it('deleteByConversation preserves the conversation', async () => {
+      const { messageRepository } = require('../repositories/messageRepository');
+      const { conversationRepository } = require('../repositories/conversationRepository');
+
+      const conversation = await conversationRepository.create({ name: 'Sala', topic: 'sala/futebol' });
+      await messageRepository.create({
+        conversationId: conversation.id,
+        sender: 'Alice',
+        body: 'Mensagem',
+        direction: 'sent',
+      });
+
+      await messageRepository.deleteByConversation(conversation.id);
+      const found = await conversationRepository.findById(conversation.id);
+      expect(found).toBeTruthy();
+      expect(found?.id).toBe(conversation.id);
+      expect(found?.topic).toBe('sala/futebol');
+    });
+
+    it('deleteByConversation does not affect messages from other conversations', async () => {
+      const { messageRepository } = require('../repositories/messageRepository');
+      const { conversationRepository } = require('../repositories/conversationRepository');
+
+      const conv1 = await conversationRepository.create({ name: 'Sala 1', topic: 'sala/1' });
+      const conv2 = await conversationRepository.create({ name: 'Sala 2', topic: 'sala/2' });
+
+      await messageRepository.create({
+        conversationId: conv1.id,
+        sender: 'Alice',
+        body: 'Mensagem 1',
+        direction: 'sent',
+      });
+      await messageRepository.create({
+        conversationId: conv2.id,
+        sender: 'Bob',
+        body: 'Mensagem 2',
+        direction: 'received',
+      });
+
+      await messageRepository.deleteByConversation(conv1.id);
+      const messagesConv2 = await messageRepository.findByConversation(conv2.id);
+      expect(messagesConv2).toHaveLength(1);
+      expect(messagesConv2[0].body).toBe('Mensagem 2');
+    });
+
+    it('deleteByConversation is idempotent (no error when called twice)', async () => {
+      const { messageRepository } = require('../repositories/messageRepository');
+      const { conversationRepository } = require('../repositories/conversationRepository');
+
+      const conversation = await conversationRepository.create({ name: 'Sala', topic: 'sala/futebol' });
+      await messageRepository.create({
+        conversationId: conversation.id,
+        sender: 'Alice',
+        body: 'Mensagem',
+        direction: 'sent',
+      });
+
+      await messageRepository.deleteByConversation(conversation.id);
+      await expect(messageRepository.deleteByConversation(conversation.id)).resolves.toBeUndefined();
     });
   });
 

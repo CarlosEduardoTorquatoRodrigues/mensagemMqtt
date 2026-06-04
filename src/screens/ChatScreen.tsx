@@ -3,6 +3,7 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
+  Alert,
   StyleSheet,
   Text,
   TextInput,
@@ -13,6 +14,7 @@ import { messageRepository } from '../repositories/messageRepository';
 import { Conversation, Message, ConnectionStatus } from '../types';
 import { MessageBubble } from '../components/MessageBubble';
 import { StatusIndicator } from '../components/StatusIndicator';
+import { mqttService } from '../services/mqttService';
 
 interface Props {
   conversation: Conversation;
@@ -20,6 +22,7 @@ interface Props {
   onBack: () => void;
   onSendMessage: (conversation: Conversation, body: string) => Promise<Message>;
   refreshKey: number;
+  onClearComplete?: () => void;
 }
 
 export function ChatScreen({
@@ -28,11 +31,13 @@ export function ChatScreen({
   onBack,
   onSendMessage,
   refreshKey,
+  onClearComplete,
 }: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [body, setBody] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const listRef = useRef<FlatList<Message>>(null);
 
   const loadMessages = async () => {
@@ -69,6 +74,63 @@ export function ChatScreen({
     }
   };
 
+  const handleClear = () => {
+    Alert.alert(
+      'Apagar todas as mensagens?',
+      'Apagar todas as mensagens desta conversa? A conversa será mantida.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Apagar',
+          onPress: async () => {
+            try {
+              console.log('[ChatScreen] handleClear start', conversation.id);
+              setDeleting(true);
+              // Desinscrever do tópico para evitar repopulação por mensagens do broker
+              try {
+                mqttService.unsubscribe(conversation.topic);
+                console.log('[ChatScreen] unsubscribed from', conversation.topic);
+              } catch (e) {
+                console.log('[ChatScreen] unsubscribe failed', e);
+              }
+
+              await messageRepository.deleteByConversation(conversation.id);
+              // Atualiza UI imediatamente e recarrega o estado do banco
+              setMessages([]);
+              await loadMessages();
+              // Tentar limpar mensagem retida no broker (caso haja retenção de payload)
+              try {
+                mqttService.publish(conversation.topic, '', { retain: true });
+                console.log('[ChatScreen] published empty retained message to', conversation.topic);
+              } catch (e) {
+                console.log('[ChatScreen] failed to clear retained message', e);
+              }
+
+              // Notifica o container (App) que a limpeza terminou, para suprimir mensagens entrantes brevemente
+              try {
+                onClearComplete?.();
+              } catch {}
+
+              // Re-subscribe ao tópico após a limpeza
+              try {
+                mqttService.subscribe(conversation.topic);
+                console.log('[ChatScreen] resubscribed to', conversation.topic);
+              } catch (e) {
+                console.log('[ChatScreen] resubscribe failed', e);
+              }
+            } catch (e) {
+              console.log('[ChatScreen] handleClear error', e);
+              setError('Não foi possível limpar o histórico.');
+            } finally {
+              setDeleting(false);
+              console.log('[ChatScreen] handleClear end', conversation.id);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -83,6 +145,13 @@ export function ChatScreen({
           <Text style={styles.title}>{conversation.name}</Text>
           <StatusIndicator status={status} />
         </View>
+        <TouchableOpacity
+          onPress={handleClear}
+          style={styles.clearButton}
+          disabled={deleting}
+        >
+          <Text style={styles.clearText}>{deleting ? 'Limpando...' : 'Limpar'}</Text>
+        </TouchableOpacity>
       </View>
       <View style={styles.content}>
         {loading ? (
@@ -137,6 +206,14 @@ const styles = StyleSheet.create({
   },
   backText: {
     color: '#1976d2',
+    fontWeight: '700',
+  },
+  clearButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  clearText: {
+    color: '#c62828',
     fontWeight: '700',
   },
   title: {

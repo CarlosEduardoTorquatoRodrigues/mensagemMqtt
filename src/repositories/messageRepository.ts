@@ -63,6 +63,7 @@ export const messageRepository: MessageRepository = {
 
   async findByConversation(conversationId: string): Promise<Message[]> {
     const db = await getDatabase();
+    console.log('[messageRepository] findByConversation conversationId=', conversationId);
     const rows = await db.getAllAsync<{
       id: string;
       conversation_id: string;
@@ -80,6 +81,8 @@ export const messageRepository: MessageRepository = {
 
   async deleteByConversation(conversationId: string): Promise<void> {
     const db = await getDatabase();
+    console.log('[messageRepository] deleteByConversation conversationId=', conversationId);
     await db.runAsync('DELETE FROM messages WHERE conversation_id = ?', [conversationId]);
+    console.log('[messageRepository] deleteByConversation completed conversationId=', conversationId);
   },
 };

@@ -20,6 +20,7 @@ export default function App() {
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [suppressUntil, setSuppressUntil] = useState<number>(0);
 
   useEffect(() => {
     const load = async () => {
@@ -36,11 +37,13 @@ export default function App() {
 
   const handleReceivedMessage = useCallback(
     (message: { conversationId: string }) => {
+      // Ignora mensagens recebidas durante janela de supressão (ex.: limpeza)
+      if (Date.now() < suppressUntil) return;
       if (selectedConversation?.id === message.conversationId) {
         setRefreshKey((prev) => prev + 1);
       }
     },
-    [selectedConversation]
+    [selectedConversation, suppressUntil]
   );
 
   const mqtt = useMqtt(settings, conversations.map((item) => item.topic), handleReceivedMessage);
@@ -120,6 +123,7 @@ export default function App() {
           onBack={() => setScreen('conversations')}
           onSendMessage={handleSendMessage}
           refreshKey={refreshKey}
+          onClearComplete={() => setSuppressUntil(Date.now() + 5000)}
         />
       ) : null}
       <StatusBar style="auto" />

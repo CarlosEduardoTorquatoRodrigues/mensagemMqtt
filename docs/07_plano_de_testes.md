@@ -72,3 +72,54 @@ etapa de desenvolvimento. Não corrija código: documente falhas com severidade
 
 ### 8.4 Recomendação
 - Rejeitar a liberação do módulo até que a falha de compilação TypeScript seja corrigida.
+
+### 8.5 Execução QA — 2026-06-04 (Agente QA v1.0)
+
+#### 8.5.1 Comandos executados
+- `npx tsc --noEmit`: passou (sem saída)
+- `npm test -- --runInBand`: executado — 11 suítes encontradas; 1 suíte falhou.
+
+#### 8.5.2 Resultado resumido
+- Test Suites: 1 failed, 10 passed, 11 total
+- Tests: 55 passed, 55 total
+
+#### 8.5.3 Falha identificada
+- ID: F-QA-2026-06-04-01
+- Severidade: ALTO
+- Localização: `projetoMensagemMqtt/src/__tests__/ConversationsScreen.test.tsx`
+- Descrição: Falha na execução da suíte de testes por erro de ambiente durante import de `expo-sqlite` / `expo-constants`. Stack trace indica `TypeError: Cannot read properties of undefined (reading 'EXDevLauncher')` originando em `node_modules/expo/node_modules/expo-constants/src/Constants.ts`.
+- Passos para reproduzir:
+  1. No terminal da raiz do projeto execute `cd projetoMensagemMqtt`.
+ 2. Execute `npm test -- --runInBand`.
+ 3. Observe falha na suíte `projetoMensagemMqtt/src/__tests__/ConversationsScreen.test.tsx` com o erro indicado acima.
+
+#### 8.5.4 Impacto sobre RF12 / RN10 (limpar histórico)
+- RF12 (Histórico esvazia): PASSOU — cobertura presente em `src/__tests__/ChatScreen.clear.test.tsx` (suíte PASSOU).
+- RN10 (Conversa preservada e tópico permanece assinado): PASSOU — testes relevantes em `src/__tests__/backend.test.ts` e `projetoMensagemMqtt/src/__tests__/mqttService.test.ts` passaram.
+
+### 8.6 Falha reportada em ambiente real — botão "Limpar" não limpa o histórico
+
+- ID: F-QA-2026-06-04-02
+- Severidade: ALTO
+- Localização aparente: `projetoMensagemMqtt/src/screens/ChatScreen.tsx` (handler `handleClear`) / integração com `messageRepository.deleteByConversation`
+- Descrição: Em uso manual (aplicativo em dispositivo/emulador), o botão `Limpar` aparece mas, após confirmar 'Apagar', o histórico de mensagens continua visível para o usuário — ação não surte efeito visível.
+- Passos para reproduzir (manual):
+  1. Abrir o app (emulador ou dispositivo) e navegar até uma conversa com histórico de mensagens.
+ 2. Pressionar o botão `Limpar` no canto superior direito.
+ 3. Na confirmação, tocar `Apagar`.
+ 4. Esperar feedback; observar que as mensagens permanecem na tela.
+- Verificações recomendadas para diagnóstico (executar antes de alterar código):
+  1. Ativar debug remoto / console e adicionar `console.log` no início de `handleClear` e após `await messageRepository.deleteByConversation(conversation.id)` para confirmar se o handler é invocado e se a promise resolve.
+  2. Verificar se `messageRepository.deleteByConversation` está sendo chamado com o `conversation.id` correto (log do argumento).
+  3. Executar `messageRepository.findByConversation(conversation.id)` no console (ou via REPL/test) após a operação para confirmar se o banco retornou array vazio.
+  4. Conferir se algum efeito colateral (ex.: reconexão MQTT ou listener) está repopulando `messages` logo após a limpeza.
+  5. Verificar se `setMessages([])` está sendo chamado e se o componente está sendo re-renderizado (React DevTools).
+- Impacto sobre critérios de aceite: bloqueia aceitação do fluxo manual de limpeza de histórico (RN10/RF12 — validação manual necessária). Apesar dos testes unitários cobrirem o caso, a experiência manual mostra discrepância entre teste e runtime.
+- Recomendação imediata: Marcar como **REJEITADO** para liberação de UX até que a equipe reproduza e prove a correção. Fornecer logs/prints do console e resultado de `findByConversation` vazia como evidência após correção.
+
+ASSINATURA: Agente de QA | 2026-06-04 | v1.0
+
+#### 8.5.5 Recomendação
+- Rejeitar a liberação do módulo até que a falha de execução da suíte de front-end seja corrigida (mock de `expo-constants` / `expo-sqlite` ou ajuste do ambiente de testes). Apesar dos testes de limpeza de histórico terem passado, a suíte `ConversationsScreen` não pôde ser validada por falha de ambiente.
+
+ASSINATURA: Agente de QA | 2026-06-04 | v1.0
