@@ -22,7 +22,7 @@ export interface Conversation {
   id: string;
   name: string;
   topic: string;
-  createdAt: string;
+  createdAt: string; // ISO 8601
 }
 
 export interface CreateConversationInput {
@@ -36,7 +36,7 @@ export interface Message {
   sender: string;
   body: string;
   direction: MessageDirection;
-  createdAt: string;
+  createdAt: string; // ISO 8601
 }
 
 export interface CreateMessageInput {
@@ -46,11 +46,12 @@ export interface CreateMessageInput {
   direction: MessageDirection;
 }
 
+// Conteúdo trafegado no payload MQTT (JSON publicado no tópico)
 export interface MqttPayload {
   clientId: string;
   sender: string;
   body: string;
-  sentAt: string;
+  sentAt: string; // ISO 8601
 }
 
 export interface MqttConnectConfig {

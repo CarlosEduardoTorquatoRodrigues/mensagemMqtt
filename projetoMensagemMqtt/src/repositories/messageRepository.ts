@@ -1,27 +1,6 @@
-import { randomUUID } from 'expo-crypto';
+import * as Crypto from 'expo-crypto';
 import { getDatabase } from '../database/database';
-import {
-  CreateMessageInput,
-  Message,
-} from '../types';
-
-function toMessage(row: {
-  id: string;
-  conversation_id: string;
-  sender: string;
-  body: string;
-  direction: 'sent' | 'received';
-  created_at: string;
-}): Message {
-  return {
-    id: row.id,
-    conversationId: row.conversation_id,
-    sender: row.sender,
-    body: row.body,
-    direction: row.direction,
-    createdAt: row.created_at,
-  };
-}
+import { CreateMessageInput, Message } from '../types';
 
 export interface MessageRepository {
   create(input: CreateMessageInput): Promise<Message>;
@@ -29,11 +8,11 @@ export interface MessageRepository {
   deleteByConversation(conversationId: string): Promise<void>;
 }
 
-export class MessageRepositoryImpl implements MessageRepository {
-  async create(input: CreateMessageInput): Promise<Message> {
-    const db = await getDatabase();
+export const messageRepository: MessageRepository = {
+  async create(input) {
+    const database = await getDatabase();
     const message: Message = {
-      id: randomUUID(),
+      id: Crypto.randomUUID(),
       conversationId: input.conversationId,
       sender: input.sender,
       body: input.body,
@@ -41,8 +20,8 @@ export class MessageRepositoryImpl implements MessageRepository {
       createdAt: new Date().toISOString(),
     };
 
-    await db.runAsync(
-      'INSERT INTO messages (id, conversation_id, sender, body, direction, created_at) VALUES (?, ?, ?, ?, ?, ?);',
+    await database.runAsync(
+      'INSERT INTO messages (id, conversation_id, sender, body, direction, created_at) VALUES (?, ?, ?, ?, ?, ?)',
       message.id,
       message.conversationId,
       message.sender,
@@ -52,24 +31,31 @@ export class MessageRepositoryImpl implements MessageRepository {
     );
 
     return message;
-  }
+  },
 
-  async findByConversation(conversationId: string): Promise<Message[]> {
-    const db = await getDatabase();
-    const rows = await db.getAllAsync<{
+  async findByConversation(conversationId) {
+    const database = await getDatabase();
+    const rows = await database.getAllAsync<{
       id: string;
       conversation_id: string;
       sender: string;
       body: string;
-      direction: 'sent' | 'received';
+      direction: string;
       created_at: string;
-    }>('SELECT id, conversation_id, sender, body, direction, created_at FROM messages WHERE conversation_id = ? ORDER BY created_at ASC;', conversationId);
+    }>('SELECT id, conversation_id, sender, body, direction, created_at FROM messages WHERE conversation_id = ? ORDER BY created_at ASC', conversationId);
 
-    return rows.map(toMessage);
-  }
+    return rows.map((row) => ({
+      id: row.id,
+      conversationId: row.conversation_id,
+      sender: row.sender,
+      body: row.body,
+      direction: row.direction as 'sent' | 'received',
+      createdAt: row.created_at,
+    }));
+  },
 
-  async deleteByConversation(conversationId: string): Promise<void> {
-    const db = await getDatabase();
-    await db.runAsync('DELETE FROM messages WHERE conversation_id = ?;', conversationId);
-  }
-}
+  async deleteByConversation(conversationId) {
+    const database = await getDatabase();
+    await database.runAsync('DELETE FROM messages WHERE conversation_id = ?', conversationId);
+  },
+};

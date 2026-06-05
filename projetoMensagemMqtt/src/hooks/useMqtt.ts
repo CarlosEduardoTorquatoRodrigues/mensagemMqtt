@@ -1,81 +1,96 @@
-import { useEffect, useRef, useState } from 'react';
-import { MqttServiceImpl } from '../services/mqttService';
-import {
-  ConnectionStatus,
-  MqttConnectConfig,
-  MqttPayload,
-} from '../types';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { mqttService } from '../services/mqttService';
+import { ConnectionStatus, MqttPayload, Settings } from '../types';
 
-type MessageHandler = (topic: string, payload: MqttPayload) => void;
+export interface UseMqttResult {
+  status: ConnectionStatus;
+  subscribe: (topic: string) => void;
+  unsubscribe: (topic: string) => void;
+  sendMessage: (topic: string, payload: MqttPayload) => void;
+}
 
-const service = new MqttServiceImpl();
-
-export function useMqtt() {
+export function useMqtt(
+  settings: Settings | null,
+  topics: string[] = [],
+  onMessage: (topic: string, payload: MqttPayload) => void,
+): UseMqttResult {
   const [status, setStatus] = useState<ConnectionStatus>('disconnected');
-  const handlersRef = useRef(new Set<MessageHandler>());
-  const statusDisposeRef = useRef<() => void | null>(null);
+  const onMessageRef = useRef(onMessage);
 
   useEffect(() => {
-    statusDisposeRef.current = service.onStatusChange((s) => setStatus(s));
+    onMessageRef.current = onMessage;
+  }, [onMessage]);
 
-    const disposeMsg = service.onMessage((topic, payload) => {
-      handlersRef.current.forEach((h) => h(topic, payload));
+  useEffect(() => {
+    if (!settings) {
+      mqttService.disconnect();
+      setStatus('disconnected');
+      return;
+    }
+
+    setStatus('connecting');
+
+    const statusCancel = mqttService.onStatusChange((nextStatus) => {
+      setStatus(nextStatus);
     });
 
-    return () => {
-      disposeMsg();
-      if (statusDisposeRef.current) {
-        statusDisposeRef.current();
+    const messageCancel = mqttService.onMessage((topic, payload) => {
+      if (payload.clientId === settings.clientId) {
+        return;
       }
-      service.disconnect();
+      onMessageRef.current(topic, payload);
+    });
+
+    mqttService
+      .connect({
+        host: settings.brokerHost,
+        port: settings.brokerPort,
+        useSsl: settings.useSsl,
+        clientId: settings.clientId,
+      })
+      .catch(() => {
+        setStatus('error');
+      });
+
+    return () => {
+      messageCancel();
+      statusCancel();
     };
+  }, [
+    settings?.brokerHost,
+    settings?.brokerPort,
+    settings?.useSsl,
+    settings?.clientId,
+  ]);
+
+  useEffect(() => {
+    if (!settings || topics.length === 0) {
+      return;
+    }
+
+    topics.forEach((topic) => mqttService.subscribe(topic));
+
+    return () => {
+      topics.forEach((topic) => mqttService.unsubscribe(topic));
+    };
+  }, [settings?.clientId, JSON.stringify(topics)]);
+
+  const subscribe = useCallback((topic: string) => {
+    mqttService.subscribe(topic);
   }, []);
 
-  async function connect(config: MqttConnectConfig) {
-    try {
-      await service.connect(config);
-      // status is updated via onStatusChange listener
-    } catch (e) {
-      // nunca derrubar o app: apenas refletir status 'error'
-      setStatus('error');
-    }
-  }
+  const unsubscribe = useCallback((topic: string) => {
+    mqttService.unsubscribe(topic);
+  }, []);
 
-  function subscribe(topic: string) {
-    try {
-      service.subscribe(topic);
-    } catch {
-      // ignore
-    }
-  }
-
-  function unsubscribe(topic: string) {
-    try {
-      service.unsubscribe(topic);
-    } catch {
-      // ignore
-    }
-  }
-
-  function sendMessage(topic: string, payload: MqttPayload) {
-    try {
-      service.publish(topic, payload);
-    } catch {
-      // ignore
-    }
-  }
-
-  function addMessageListener(cb: MessageHandler) {
-    handlersRef.current.add(cb);
-    return () => handlersRef.current.delete(cb);
-  }
+  const sendMessage = useCallback((topic: string, payload: MqttPayload) => {
+    mqttService.publish(topic, payload);
+  }, []);
 
   return {
     status,
-    connect,
     subscribe,
     unsubscribe,
     sendMessage,
-    addMessageListener,
-  } as const;
+  };
 }

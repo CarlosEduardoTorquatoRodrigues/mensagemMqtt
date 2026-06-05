@@ -1,22 +1,23 @@
 import React from 'react';
-import { GestureResponderEvent, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Conversation } from '../types';
 
 interface Props {
   conversation: Conversation;
-  onPress?: (c: Conversation) => void;
-  onLongPress?: (c: Conversation) => void;
+  onPress: () => void;
+  onLongPress: () => void;
 }
 
-export default function ConversationItem({ conversation, onPress, onLongPress }: Props) {
+export function ConversationItem({ conversation, onPress, onLongPress }: Props) {
   return (
     <TouchableOpacity
-      onPress={() => onPress?.(conversation)}
-      onLongPress={() => onLongPress?.(conversation)}
       style={styles.container}
+      onPress={onPress}
+      onLongPress={onLongPress}
+      activeOpacity={0.7}
     >
       <View>
-        <Text style={styles.title}>{conversation.name}</Text>
+        <Text style={styles.name}>{conversation.name}</Text>
         <Text style={styles.topic}>{conversation.topic}</Text>
       </View>
     </TouchableOpacity>
@@ -24,7 +25,22 @@ export default function ConversationItem({ conversation, onPress, onLongPress }:
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 12, borderBottomWidth: 1, borderColor: '#eee' },
-  title: { fontSize: 16, fontWeight: '600' },
-  topic: { fontSize: 12, color: '#666' },
+  container: {
+    padding: 16,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    marginBottom: 10,
+  },
+  name: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#222',
+  },
+  topic: {
+    fontSize: 13,
+    color: '#555',
+    marginTop: 4,
+  },
 });

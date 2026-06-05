@@ -1,41 +1,177 @@
 import './src/polyfills';
-import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useState } from 'react';
-import { SafeAreaView } from 'react-native';
-import SettingsScreen from './src/screens/SettingsScreen';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, SafeAreaView, StyleSheet, View } from 'react-native';
 import ConversationsScreen from './src/screens/ConversationsScreen';
 import ChatScreen from './src/screens/ChatScreen';
-import { SettingsRepositoryImpl } from './src/repositories/settingsRepository';
+import { SettingsScreen } from './src/screens/SettingsScreen';
+import { useMqtt } from './src/hooks/useMqtt';
+import { conversationRepository } from './src/repositories/conversationRepository';
+import { messageRepository } from './src/repositories/messageRepository';
+import { settingsRepository } from './src/repositories/settingsRepository';
+import { Conversation, Settings } from './src/types';
 
-type Screen = 'settings' | 'conversations' | { chat: string; topic: string };
+type Screen = 'settings' | 'conversations' | 'chat';
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>('conversations');
-  const settingsRepo = new SettingsRepositoryImpl();
+  const [screen, setScreen] = useState<Screen>('settings');
+  const [settings, setSettings] = useState<Settings | null>(null);
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  const [topics, setTopics] = useState<string[]>([]);
+  const [loadingSettings, setLoadingSettings] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const handleIncomingMessage = useCallback(
+    async (topic: string, payload: { clientId: string; sender: string; body: string; sentAt: string }) => {
+      const conversation = await conversationRepository.findByTopic(topic);
+      if (!conversation) {
+        return;
+      }
+
+      await messageRepository.create({
+        conversationId: conversation.id,
+        sender: payload.sender,
+        body: payload.body,
+        direction: 'received',
+      });
+
+      if (selectedConversation?.id === conversation.id) {
+        setRefreshKey((prev) => prev + 1);
+      }
+    },
+    [selectedConversation?.id],
+  );
+
+  const mqtt = useMqtt(settings, topics, handleIncomingMessage);
 
   useEffect(() => {
-    settingsRepo.get().then((s) => {
-      if (!s) setScreen('settings');
-    });
+    let mounted = true;
+
+    settingsRepository
+      .get()
+      .then((saved) => {
+        if (!mounted) {
+          return;
+        }
+
+        if (saved) {
+          setSettings(saved);
+          setScreen('conversations');
+        } else {
+          setScreen('settings');
+        }
+      })
+      .finally(() => {
+        if (mounted) {
+          setLoadingSettings(false);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  if (screen === 'settings') {
-    return <SettingsScreen onSaved={() => setScreen('conversations')} />;
-  }
+  useEffect(() => {
+    if (!settings) {
+      setTopics([]);
+      return;
+    }
 
-  if (typeof screen === 'object' && screen.chat) {
-    return <ChatScreen conversationId={screen.chat} topic={screen.topic} onBack={() => setScreen('conversations')} />;
+    let mounted = true;
+
+    conversationRepository.findAll().then((conversations) => {
+      if (mounted) {
+        setTopics(conversations.map((item) => item.topic));
+      }
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, [settings?.clientId]);
+
+  const handleSaveSettings = async (input: Partial<Omit<Settings, 'clientId'>>) => {
+    const saved = await settingsRepository.save(input);
+    setSettings(saved);
+    setScreen('conversations');
+    return saved;
+  };
+
+  const handleConversationCreated = (conversation: Conversation) => {
+    setTopics((prev) => [...prev, conversation.topic]);
+    setSelectedConversation(conversation);
+    setScreen('chat');
+  };
+
+  const handleConversationDeleted = (topic: string) => {
+    setTopics((prev) => prev.filter((item) => item !== topic));
+    if (selectedConversation?.topic === topic) {
+      setSelectedConversation(null);
+      setScreen('conversations');
+    }
+  };
+
+  const handleOpenChat = (conversation: Conversation) => {
+    setSelectedConversation(conversation);
+    setScreen('chat');
+  };
+
+  const handleBackToConversations = () => {
+    setScreen('conversations');
+  };
+
+  if (loadingSettings) {
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" />
+      </SafeAreaView>
+    );
   }
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
-      <ConversationsScreen onOpenConversation={(id) => {
-        // find conversation to get topic
-        // navigation: for simplicity, open chat with id and topic placeholder; repo will supply correct topic in real app
-        setScreen({ chat: id, topic: '' });
-      }} openSettings={() => setScreen('settings')} />
-      <StatusBar style="auto" />
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        {screen === 'settings' ? (
+          <SettingsScreen
+            settings={settings}
+            status={mqtt.status}
+            onSave={handleSaveSettings}
+            onBack={settings ? handleBackToConversations : undefined}
+          />
+        ) : screen === 'conversations' ? (
+          <ConversationsScreen
+            status={mqtt.status}
+            onOpenSettings={() => setScreen('settings')}
+            onOpenChat={handleOpenChat}
+            onConversationCreated={handleConversationCreated}
+            onConversationDeleted={handleConversationDeleted}
+          />
+        ) : selectedConversation && settings ? (
+          <ChatScreen
+            conversation={selectedConversation}
+            settings={settings}
+            status={mqtt.status}
+            sendMessage={mqtt.sendMessage}
+            onBack={handleBackToConversations}
+            refreshKey={refreshKey}
+          />
+        ) : null}
+      </View>
     </SafeAreaView>
   );
 }
 
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f7f8fb',
+  },
+  container: {
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});

@@ -1,27 +1,9 @@
-import { randomUUID } from 'expo-crypto';
+import * as Crypto from 'expo-crypto';
 import { getDatabase } from '../database/database';
-import {
-  AppError,
-  Conversation,
-  CreateConversationInput,
-} from '../types';
+import { AppError, Conversation, CreateConversationInput } from '../types';
 
-function createAppError(code: AppError['code'], message: string) {
-  return Object.assign(new Error(message), { code });
-}
-
-function toConversation(row: {
-  id: string;
-  name: string;
-  topic: string;
-  created_at: string;
-}): Conversation {
-  return {
-    id: row.id,
-    name: row.name,
-    topic: row.topic,
-    createdAt: row.created_at,
-  };
+function createAppError(code: AppError['code'], message: string): Error & AppError {
+  return Object.assign(new Error(message), { code, message });
 }
 
 export interface ConversationRepository {
@@ -32,30 +14,24 @@ export interface ConversationRepository {
   delete(id: string): Promise<void>;
 }
 
-export class ConversationRepositoryImpl implements ConversationRepository {
-  async create(input: CreateConversationInput): Promise<Conversation> {
-    const db = await getDatabase();
-    const existing = await db.getAllAsync<{ id: string }>(
-      'SELECT id FROM conversations WHERE topic = ?;',
-      input.topic,
-    );
+export const conversationRepository: ConversationRepository = {
+  async create(input) {
+    const database = await getDatabase();
+    const existing = await database.getAllAsync<{ id: string }>('SELECT id FROM conversations WHERE topic = ? LIMIT 1', input.topic);
 
-    if (existing.length) {
-      throw createAppError(
-        'TOPIC_ALREADY_EXISTS',
-        'The conversation topic already exists.',
-      );
+    if (existing.length > 0) {
+      throw createAppError('TOPIC_ALREADY_EXISTS', `Topic ${input.topic} already exists`);
     }
 
     const conversation: Conversation = {
-      id: randomUUID(),
+      id: Crypto.randomUUID(),
       name: input.name,
       topic: input.topic,
       createdAt: new Date().toISOString(),
     };
 
-    await db.runAsync(
-      'INSERT INTO conversations (id, name, topic, created_at) VALUES (?, ?, ?, ?);',
+    await database.runAsync(
+      'INSERT INTO conversations (id, name, topic, created_at) VALUES (?, ?, ?, ?)',
       conversation.id,
       conversation.name,
       conversation.topic,
@@ -63,46 +39,71 @@ export class ConversationRepositoryImpl implements ConversationRepository {
     );
 
     return conversation;
-  }
+  },
 
-  async findAll(): Promise<Conversation[]> {
-    const db = await getDatabase();
-    const rows = await db.getAllAsync<{
+  async findAll() {
+    const database = await getDatabase();
+    const rows = await database.getAllAsync<{
       id: string;
       name: string;
       topic: string;
       created_at: string;
-    }>('SELECT id, name, topic, created_at FROM conversations ORDER BY created_at DESC;');
+    }>('SELECT id, name, topic, created_at FROM conversations ORDER BY created_at DESC');
 
-    return rows.map(toConversation);
-  }
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      topic: row.topic,
+      createdAt: row.created_at,
+    }));
+  },
 
-  async findById(id: string): Promise<Conversation | null> {
-    const db = await getDatabase();
-    const rows = await db.getAllAsync<{
+  async findById(id) {
+    const database = await getDatabase();
+    const rows = await database.getAllAsync<{
       id: string;
       name: string;
       topic: string;
       created_at: string;
-    }>('SELECT id, name, topic, created_at FROM conversations WHERE id = ?;', id);
+    }>('SELECT id, name, topic, created_at FROM conversations WHERE id = ? LIMIT 1', id);
 
-    return rows.length ? toConversation(rows[0]) : null;
-  }
+    if (rows.length === 0) {
+      return null;
+    }
 
-  async findByTopic(topic: string): Promise<Conversation | null> {
-    const db = await getDatabase();
-    const rows = await db.getAllAsync<{
+    const row = rows[0];
+    return {
+      id: row.id,
+      name: row.name,
+      topic: row.topic,
+      createdAt: row.created_at,
+    };
+  },
+
+  async findByTopic(topic) {
+    const database = await getDatabase();
+    const rows = await database.getAllAsync<{
       id: string;
       name: string;
       topic: string;
       created_at: string;
-    }>('SELECT id, name, topic, created_at FROM conversations WHERE topic = ?;', topic);
+    }>('SELECT id, name, topic, created_at FROM conversations WHERE topic = ? LIMIT 1', topic);
 
-    return rows.length ? toConversation(rows[0]) : null;
-  }
+    if (rows.length === 0) {
+      return null;
+    }
 
-  async delete(id: string): Promise<void> {
-    const db = await getDatabase();
-    await db.runAsync('DELETE FROM conversations WHERE id = ?;', id);
-  }
-}
+    const row = rows[0];
+    return {
+      id: row.id,
+      name: row.name,
+      topic: row.topic,
+      createdAt: row.created_at,
+    };
+  },
+
+  async delete(id) {
+    const database = await getDatabase();
+    await database.runAsync('DELETE FROM conversations WHERE id = ?', id);
+  },
+};

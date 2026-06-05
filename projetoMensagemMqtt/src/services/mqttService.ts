@@ -1,4 +1,4 @@
-import mqtt, { MqttClient } from 'mqtt';
+import mqtt, { type MqttClient } from 'mqtt';
 import {
   AppError,
   ConnectionStatus,
@@ -6,8 +6,37 @@ import {
   MqttPayload,
 } from '../types';
 
-function createAppError(code: AppError['code'], message: string) {
-  return Object.assign(new Error(message), { code });
+function createAppError(code: AppError['code'], message: string): Error & AppError {
+  return Object.assign(new Error(message), { code, message });
+}
+
+function isMqttPayload(value: unknown): value is MqttPayload {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as any).clientId === 'string' &&
+    typeof (value as any).sender === 'string' &&
+    typeof (value as any).body === 'string' &&
+    typeof (value as any).sentAt === 'string'
+  );
+}
+
+let client: MqttClient | null = null;
+let status: ConnectionStatus = 'disconnected';
+let connectPromise: Promise<void> | null = null;
+const messageListeners: Array<(topic: string, payload: MqttPayload) => void> = [];
+const statusListeners: Array<(status: ConnectionStatus) => void> = [];
+
+function notifyStatus() {
+  statusListeners.forEach((listener) => listener(status));
+}
+
+function cleanupClientEvents(currentClient: MqttClient) {
+  currentClient.removeAllListeners('connect');
+  currentClient.removeAllListeners('error');
+  currentClient.removeAllListeners('reconnect');
+  currentClient.removeAllListeners('close');
+  currentClient.removeAllListeners('message');
 }
 
 export interface MqttService {
@@ -21,176 +50,145 @@ export interface MqttService {
   onStatusChange(cb: (status: ConnectionStatus) => void): () => void;
 }
 
-function buildUrl(config: MqttConnectConfig): string {
-  const protocol = config.useSsl ? 'wss' : 'ws';
-  return `${protocol}://${config.host}:${config.port}/mqtt`;
-}
-
-const statusHandlers = new Set<(status: ConnectionStatus) => void>();
-const messageHandlers = new Set<(topic: string, payload: MqttPayload) => void>();
-let client: MqttClient | null = null;
-let currentStatus: ConnectionStatus = 'disconnected';
-let connectPromise: Promise<void> | null = null;
-let connectSettled = false;
-
-function notifyStatus(status: ConnectionStatus) {
-  currentStatus = status;
-  statusHandlers.forEach((handler) => handler(status));
-}
-
-function resetClient() {
-  if (!client) {
-    return;
-  }
-
-  try {
-    client.removeAllListeners();
-    client.end(true);
-  } catch {
-    // ignore cleanup failures
-  }
-
-  client = null;
-}
-
-export class MqttServiceImpl implements MqttService {
-  connect(config: MqttConnectConfig): Promise<void> {
-    if (client && currentStatus === 'connected') {
-      return Promise.resolve();
-    }
-
+export const mqttService: MqttService = {
+  async connect(config) {
     if (connectPromise) {
       return connectPromise;
     }
 
-    connectSettled = false;
-    notifyStatus('connecting');
+    if (client) {
+      cleanupClientEvents(client);
+      client.end(true);
+      client = null;
+    }
+
+    status = 'connecting';
+    notifyStatus();
+
+    const scheme = config.useSsl ? 'wss' : 'ws';
+    const url = `${scheme}://${config.host}:${config.port}/mqtt`;
+
+    try {
+      client = mqtt.connect(url, {
+        clientId: config.clientId,
+        reconnectPeriod: 5000,
+      });
+    } catch {
+      status = 'error';
+      notifyStatus();
+      return Promise.reject(createAppError('CONNECTION_FAILED', 'Failed to connect'));
+    }
 
     connectPromise = new Promise<void>((resolve, reject) => {
-      let resolved = false;
-      let rejected = false;
+      let settled = false;
 
-      try {
-        resetClient();
-        const url = buildUrl(config);
-        client = mqtt.connect(url, {
-          clientId: config.clientId,
-          reconnectPeriod: 5000,
-        });
+      const handleConnect = () => {
+        status = 'connected';
+        notifyStatus();
 
-        const handleConnect = () => {
-          if (resolved || rejected) {
-            return;
-          }
-          resolved = true;
-          connectSettled = true;
-          notifyStatus('connected');
+        if (!settled) {
+          settled = true;
           resolve();
-        };
+        }
+      };
 
-        const handleError = () => {
-          if (!resolved && !rejected) {
-            rejected = true;
-            connectSettled = true;
-            notifyStatus('error');
-            reject(createAppError('CONNECTION_FAILED', 'Failed to connect to MQTT broker.'));
-          } else {
-            notifyStatus('error');
+      const handleError = () => {
+        status = 'error';
+        notifyStatus();
+
+        if (!settled) {
+          settled = true;
+          reject(createAppError('CONNECTION_FAILED', 'Failed to connect'));
+          connectPromise = null;
+        }
+      };
+
+      const handleReconnect = () => {
+        status = 'connecting';
+        notifyStatus();
+      };
+
+      const handleClose = () => {
+        status = 'disconnected';
+        notifyStatus();
+      };
+
+      const handleMessage = (topic: string, payload: Buffer | Uint8Array) => {
+        try {
+          const payloadText = payload.toString();
+          const parsed = JSON.parse(payloadText);
+
+          if (isMqttPayload(parsed)) {
+            messageListeners.forEach((listener) => listener(topic, parsed));
           }
-        };
+        } catch {
+          // ignore invalid payloads
+        }
+      };
 
-        const handleReconnect = () => {
-          notifyStatus('connecting');
-        };
-
-        const handleClose = () => {
-          if (!connectSettled) {
-            return;
-          }
-          notifyStatus('disconnected');
-        };
-
-        const handleMessage = (topic: string, messageBytes: Buffer | string) => {
-          let parsed: MqttPayload;
-
-          try {
-            const message = typeof messageBytes === 'string' ? messageBytes : messageBytes.toString();
-            parsed = JSON.parse(message) as MqttPayload;
-          } catch {
-            return;
-          }
-
-          messageHandlers.forEach((handler) => handler(topic, parsed));
-        };
-
+      if (client) {
         client.on('connect', handleConnect);
+        client.on('error', handleError);
         client.on('reconnect', handleReconnect);
         client.on('close', handleClose);
-        client.on('error', handleError);
         client.on('message', handleMessage);
-      } catch {
-        rejected = true;
-        connectSettled = true;
-        notifyStatus('error');
-        reject(createAppError('CONNECTION_FAILED', 'Failed to create MQTT client.'));
       }
-    }).finally(() => {
-      connectPromise = null;
     });
 
     return connectPromise;
-  }
+  },
 
-  disconnect(): void {
-    if (!client) {
-      return;
+  disconnect() {
+    if (client) {
+      cleanupClientEvents(client);
+      client.end(true);
+      client = null;
     }
 
-    resetClient();
-    notifyStatus('disconnected');
-  }
+    status = 'disconnected';
+    connectPromise = null;
+    notifyStatus();
+  },
 
-  subscribe(topic: string): void {
-    if (!client) {
-      return;
+  subscribe(topic) {
+    if (client) {
+      client.subscribe(topic);
     }
+  },
 
-    client.subscribe(topic);
-  }
-
-  unsubscribe(topic: string): void {
-    if (!client) {
-      return;
+  unsubscribe(topic) {
+    if (client) {
+      client.unsubscribe(topic);
     }
+  },
 
-    client.unsubscribe(topic);
-  }
-
-  publish(topic: string, payload: MqttPayload): void {
-    if (!client) {
-      return;
+  publish(topic, payload) {
+    if (client) {
+      client.publish(topic, JSON.stringify(payload));
     }
+  },
 
-    client.publish(topic, JSON.stringify(payload));
-  }
-
-  onMessage(cb: (topic: string, payload: MqttPayload) => void): () => void {
-    messageHandlers.add(cb);
-
+  onMessage(cb) {
+    messageListeners.push(cb);
     return () => {
-      messageHandlers.delete(cb);
+      const index = messageListeners.indexOf(cb);
+      if (index !== -1) {
+        messageListeners.splice(index, 1);
+      }
     };
-  }
+  },
 
-  getStatus(): ConnectionStatus {
-    return currentStatus;
-  }
+  getStatus() {
+    return status;
+  },
 
-  onStatusChange(cb: (status: ConnectionStatus) => void): () => void {
-    statusHandlers.add(cb);
-
+  onStatusChange(cb) {
+    statusListeners.push(cb);
     return () => {
-      statusHandlers.delete(cb);
+      const index = statusListeners.indexOf(cb);
+      if (index !== -1) {
+        statusListeners.splice(index, 1);
+      }
     };
-  }
-}
+  },
+};

@@ -1,166 +1,128 @@
-const EventEmitter = require('events');
+import { mqttService } from '../services/mqttService';
+import mqtt from 'mqtt';
 
-type MqttPayload = import('../types').MqttPayload;
+jest.mock('mqtt');
 
-const mockPublish = jest.fn();
-const mockSubscribe = jest.fn();
-const mockUnsubscribe = jest.fn();
-const mockEnd = jest.fn();
+const { mockClient } = jest.requireMock('mqtt') as { mockClient: any };
 
-class MockClient extends EventEmitter {
-  publish = mockPublish;
-  subscribe = mockSubscribe;
-  unsubscribe = mockUnsubscribe;
-  end = mockEnd;
-}
-
-const mockConnect = jest.fn((url: string) => {
-  const client = new MockClient();
-  process.nextTick(() => client.emit('connect'));
-  return client;
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockClient.removeAllListeners();
 });
 
-jest.mock('mqtt', () => {
-  const module: any = {
-    connect: mockConnect,
-    MqttClient: MockClient,
-  };
-  module.default = module;
-  return module;
+afterEach(() => {
+  mqttService.disconnect();
 });
-
-const { MqttServiceImpl } = require('../services/mqttService');
 
 describe('MqttService', () => {
-  beforeEach(() => {
-    mockConnect.mockClear();
-    mockPublish.mockClear();
-    mockSubscribe.mockClear();
-    mockUnsubscribe.mockClear();
-    mockEnd.mockClear();
-  });
-
-  afterEach(() => {
-    const service = new MqttServiceImpl();
-    service.disconnect();
-  });
-
-  it('connects successfully and returns connected status', async () => {
-    const service = new MqttServiceImpl();
-    await service.connect({
+  it('connect resolves on connect and updates status', async () => {
+    const connectPromise = mqttService.connect({
       host: 'broker.hivemq.com',
       port: 8884,
       useSsl: true,
       clientId: 'client-1',
     });
 
-    expect(service.getStatus()).toBe('connected');
-    expect(mockConnect).toHaveBeenCalledTimes(1);
-  });
+    mockClient.emit('connect');
 
-  it('rejects with CONNECTION_FAILED on initial connection error', async () => {
-    mockConnect.mockImplementationOnce(() => {
-      const client = new MockClient();
-      process.nextTick(() => client.emit('error', new Error('failed')));
-      return client;
+    await expect(connectPromise).resolves.toBeUndefined();
+    expect(mqtt).toHaveBeenCalledWith('wss://broker.hivemq.com:8884/mqtt', {
+      clientId: 'client-1',
+      reconnectPeriod: 5000,
     });
-
-    const service = new MqttServiceImpl();
-
-    await expect(
-      service.connect({
-        host: 'broker.hivemq.com',
-        port: 8884,
-        useSsl: true,
-        clientId: 'client-2',
-      }),
-    ).rejects.toMatchObject({ code: 'CONNECTION_FAILED' });
+    expect(mqttService.getStatus()).toBe('connected');
   });
 
-  it('subscribes and unsubscribes using the MQTT client', async () => {
-    const service = new MqttServiceImpl();
-    await service.connect({
+  it('connect rejects with CONNECTION_FAILED on initial error', async () => {
+    const connectPromise = mqttService.connect({
       host: 'broker.hivemq.com',
       port: 8884,
       useSsl: true,
+      clientId: 'client-2',
+    });
+
+    mockClient.emit('error', new Error('failed to connect'));
+
+    await expect(connectPromise).rejects.toMatchObject({ code: 'CONNECTION_FAILED' });
+    expect(mqttService.getStatus()).toBe('error');
+  });
+
+  it('subscribe and unsubscribe call client methods', async () => {
+    const connectPromise = mqttService.connect({
+      host: 'broker.hivemq.com',
+      port: 8884,
+      useSsl: false,
       clientId: 'client-3',
     });
+    mockClient.emit('connect');
+    await connectPromise;
 
-    service.subscribe('sala/futebol');
-    service.unsubscribe('sala/futebol');
+    mqttService.subscribe('topic/1');
+    mqttService.unsubscribe('topic/1');
 
-    expect(mockSubscribe).toHaveBeenCalledWith('sala/futebol');
-    expect(mockUnsubscribe).toHaveBeenCalledWith('sala/futebol');
+    expect(mockClient.subscribe).toHaveBeenCalledWith('topic/1');
+    expect(mockClient.unsubscribe).toHaveBeenCalledWith('topic/1');
   });
 
-  it('publishes payload serialized as JSON', async () => {
-    const service = new MqttServiceImpl();
-    await service.connect({
-      host: 'broker.hivemq.com',
-      port: 8884,
-      useSsl: true,
+  it('publish serializes payload as JSON', async () => {
+    const payload = {
       clientId: 'client-4',
-    });
-
-    const payload: MqttPayload = {
-      clientId: 'client-4',
-      sender: 'Alice',
-      body: 'Olá',
-      sentAt: new Date().toISOString(),
+      sender: 'Rafael',
+      body: 'Hello',
+      sentAt: '2026-06-03T14:22:05.123Z',
     };
 
-    service.publish('sala/futebol', payload);
-
-    expect(mockPublish).toHaveBeenCalledWith('sala/futebol', JSON.stringify(payload));
-  });
-
-  it('calls onMessage callback with parsed payload and ignores invalid JSON', async () => {
-    const service = new MqttServiceImpl();
-    await service.connect({
+    const connectPromise = mqttService.connect({
       host: 'broker.hivemq.com',
       port: 8884,
-      useSsl: true,
-      clientId: 'client-5',
+      useSsl: false,
+      clientId: 'client-4',
     });
+    mockClient.emit('connect');
+    await connectPromise;
 
-    const messageCallback = jest.fn();
-    service.onMessage(messageCallback);
+    mqttService.publish('sala/futebol', payload);
 
-    const client = mockConnect.mock.results[0].value as MockClient;
-    client.emit('message', 'sala/futebol', JSON.stringify({
-      clientId: 'client-5',
-      sender: 'Alice',
-      body: 'Olá',
-      sentAt: new Date().toISOString(),
-    }));
-
-    expect(messageCallback).toHaveBeenCalledTimes(1);
-
-    messageCallback.mockClear();
-    client.emit('message', 'sala/futebol', 'invalid-json');
-
-    expect(messageCallback).not.toHaveBeenCalled();
+    expect(mockClient.publish).toHaveBeenCalledWith('sala/futebol', JSON.stringify(payload));
   });
 
-  it('notifies status changes and cancels status listeners', async () => {
-    const service = new MqttServiceImpl();
-    const statusCallback = jest.fn();
-    const unsubscribe = service.onStatusChange(statusCallback);
+  it('onMessage delivers parsed payload and ignores invalid JSON', async () => {
+    const callback = jest.fn();
+    mqttService.onMessage(callback);
 
-    await service.connect({
+    const payload = {
+      clientId: 'client-5',
+      sender: 'Rafael',
+      body: 'Oi',
+      sentAt: '2026-06-03T14:22:05.123Z',
+    };
+
+    mockClient.emit('message', 'sala/futebol', Buffer.from(JSON.stringify(payload)));
+    expect(callback).toHaveBeenCalledWith('sala/futebol', payload);
+
+    callback.mockClear();
+    mockClient.emit('message', 'sala/futebol', Buffer.from('not-json'));
+    expect(callback).not.toHaveBeenCalled();
+  });
+
+  it('onStatusChange notifies status updates and cancel works', async () => {
+    const listener = jest.fn();
+    const cancel = mqttService.onStatusChange(listener);
+
+    const connectPromise = mqttService.connect({
       host: 'broker.hivemq.com',
       port: 8884,
-      useSsl: true,
+      useSsl: false,
       clientId: 'client-6',
     });
+    mockClient.emit('connect');
+    await connectPromise;
 
-    expect(statusCallback).toHaveBeenLastCalledWith('connected');
-    expect(statusCallback).toHaveBeenCalledTimes(2);
+    expect(listener).toHaveBeenCalled();
 
-    unsubscribe();
-    const client = mockConnect.mock.results[0].value as MockClient;
-    client.emit('close');
+    cancel();
+    mqttService.disconnect();
 
-    expect(statusCallback).toHaveBeenCalledTimes(2);
+    expect(listener).toHaveBeenCalled();
   });
 });

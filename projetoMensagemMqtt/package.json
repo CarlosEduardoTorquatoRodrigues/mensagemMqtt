@@ -1,7 +1,14 @@
 {
-  "name": "mensagemmqtt-expo-temp",
+  "name": "temp-expo-app",
   "version": "1.0.0",
   "main": "index.ts",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "test": "jest"
+  },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
     "buffer": "^6.0.3",
@@ -18,18 +25,10 @@
   },
   "devDependencies": {
     "@testing-library/react-native": "^13.3.3",
-    "@types/jest": "29.5.14",
-    "@types/react": "~19.1.10",
-    "babel-preset-expo": "~54.0.10",
+    "@types/jest": "^30.0.0",
+    "@types/react": "~19.1.0",
     "react-test-renderer": "^19.1.0",
     "typescript": "~5.9.2"
-  },
-  "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web",
-    "test": "jest --runInBand"
   },
   "private": true
 }

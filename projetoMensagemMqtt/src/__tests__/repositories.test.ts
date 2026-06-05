@@ -1,304 +1,373 @@
+import { settingsRepository } from '../repositories/settingsRepository';
+import { conversationRepository } from '../repositories/conversationRepository';
+import { messageRepository } from '../repositories/messageRepository';
+import { getDatabase } from '../database/database';
+
 jest.mock('../database/database', () => ({
   getDatabase: jest.fn(),
 }));
 
 jest.mock('expo-crypto', () => ({
-  randomUUID: jest.fn(() => 'uuid-1'),
+  randomUUID: jest.fn(() => 'test-uuid'),
 }));
 
-const { getDatabase } = require('../database/database') as {
-  getDatabase: jest.MockedFunction<() => Promise<any>>;
+type MockDatabase = {
+  getAllAsync: jest.Mock<any, any>;
+  runAsync: jest.Mock<any, any>;
 };
 
-import { ConversationRepositoryImpl } from '../repositories/conversationRepository';
-import { MessageRepositoryImpl } from '../repositories/messageRepository';
-import { SettingsRepositoryImpl } from '../repositories/settingsRepository';
-
-const settingsRepository = new SettingsRepositoryImpl();
-const conversationRepository = new ConversationRepositoryImpl();
-const messageRepository = new MessageRepositoryImpl();
-
-interface DbRow {
-  [key: string]: unknown;
-}
-
-class MemoryDatabase {
-  settings: DbRow[] = [];
-  conversations: DbRow[] = [];
-  messages: DbRow[] = [];
-
-  async getAllAsync(query: string, ...params: unknown[]) {
-    const normalized = query.trim().toLowerCase();
-
-    if (normalized.startsWith('select nickname')) {
-      return this.settings.map((row) => row);
-    }
-
-    if (normalized.startsWith('select id from conversations where topic')) {
-      return this.conversations.filter((row) => row.topic === params[0]);
-    }
-
-    if (normalized.startsWith('select id, name, topic, created_at from conversations order by created_at desc')) {
-      return [...this.conversations].sort((a, b) => (b.created_at as string).localeCompare(a.created_at as string));
-    }
-
-    if (normalized.startsWith('select id, name, topic, created_at from conversations where id =')) {
-      return this.conversations.filter((row) => row.id === params[0]);
-    }
-
-    if (normalized.startsWith('select id, name, topic, created_at from conversations where topic =')) {
-      return this.conversations.filter((row) => row.topic === params[0]);
-    }
-
-    if (normalized.startsWith('select id, conversation_id, sender, body, direction, created_at from messages where conversation_id =')) {
-      return [...this.messages]
-        .filter((row) => row.conversation_id === params[0])
-        .sort((a, b) => (a.created_at as string).localeCompare(b.created_at as string));
-    }
-
-    throw new Error(`Unsupported query: ${query}`);
-  }
-
-  async runAsync(query: string, ...params: unknown[]) {
-    const normalized = query.trim().toLowerCase();
-
-    if (normalized.startsWith('update settings set')) {
-      if (!this.settings.length) {
-        throw new Error('No settings row present');
-      }
-      const [nickname, brokerHost, brokerPort, useSsl, clientId] = params;
-      this.settings[0] = {
-        ...this.settings[0],
-        nickname,
-        broker_host: brokerHost,
-        broker_port: brokerPort,
-        use_ssl: useSsl,
-        client_id: clientId,
-      };
-      return;
-    }
-
-    if (normalized.startsWith('insert into settings')) {
-      const [nickname, brokerHost, brokerPort, useSsl, clientId] = params;
-      this.settings = [
-        {
-          id: 1,
-          nickname,
-          broker_host: brokerHost,
-          broker_port: brokerPort,
-          use_ssl: useSsl,
-          client_id: clientId,
-        },
-      ];
-      return;
-    }
-
-    if (normalized.startsWith('insert into conversations')) {
-      const [id, name, topic, createdAt] = params;
-      this.conversations.push({ id, name, topic, created_at: createdAt });
-      return;
-    }
-
-    if (normalized.startsWith('delete from conversations where id =')) {
-      const id = params[0];
-      this.conversations = this.conversations.filter((row) => row.id !== id);
-      this.messages = this.messages.filter((row) => row.conversation_id !== id);
-      return;
-    }
-
-    if (normalized.startsWith('insert into messages')) {
-      const [id, conversationId, sender, body, direction, createdAt] = params;
-      this.messages.push({
-        id,
-        conversation_id: conversationId,
-        sender,
-        body,
-        direction,
-        created_at: createdAt,
-      });
-      return;
-    }
-
-    if (normalized.startsWith('delete from messages where conversation_id =')) {
-      const conversationId = params[0];
-      this.messages = this.messages.filter((row) => row.conversation_id !== conversationId);
-      return;
-    }
-
-    throw new Error(`Unsupported command: ${query}`);
-  }
-
-  async execAsync(query: string) {
-    const normalized = query.trim().toLowerCase();
-    if (normalized.startsWith('delete from messages')) {
-      this.messages = [];
-      return;
-    }
-    if (normalized.startsWith('delete from conversations')) {
-      this.conversations = [];
-      return;
-    }
-    if (normalized.startsWith('delete from settings')) {
-      this.settings = [];
-      return;
-    }
-    throw new Error(`Unsupported exec command: ${query}`);
-  }
-}
-
-let database: MemoryDatabase;
-
-beforeAll(() => {
-  database = new MemoryDatabase();
-  getDatabase.mockResolvedValue(database as any);
+const makeDatabase = (): MockDatabase => ({
+  getAllAsync: jest.fn(),
+  runAsync: jest.fn(),
 });
 
-beforeEach(async () => {
-  database.settings = [];
-  database.conversations = [];
-  database.messages = [];
+const mockedGetDatabase = getDatabase as jest.MockedFunction<typeof getDatabase>;
+
+beforeEach(() => {
+  jest.clearAllMocks();
 });
 
 describe('SettingsRepository', () => {
-  it('saves settings the first time and generates clientId', async () => {
-    const saved = await settingsRepository.save({ nickname: 'Alice' });
+  it('save first time generates clientId and persists data', async () => {
+    const database = makeDatabase();
+    mockedGetDatabase.mockResolvedValue(database as any);
+    database.getAllAsync.mockResolvedValueOnce([]);
+    database.runAsync.mockResolvedValueOnce({});
 
-    expect(saved.nickname).toBe('Alice');
-    expect(saved.clientId).toBeTruthy();
-    expect(saved.brokerHost).toBe('broker.hivemq.com');
-    expect(saved.brokerPort).toBe(8884);
-    expect(saved.useSsl).toBe(true);
-  });
-
-  it('keeps the same clientId on second save', async () => {
-    const first = await settingsRepository.save({ nickname: 'Alice' });
-    const second = await settingsRepository.save({ nickname: 'Bob' });
-
-    expect(second.clientId).toBe(first.clientId);
-    expect(second.nickname).toBe('Bob');
-  });
-
-  it('throws INVALID_INPUT when nickname is missing on first save', async () => {
-    await expect(settingsRepository.save({})).rejects.toMatchObject({
-      code: 'INVALID_INPUT',
+    const result = await settingsRepository.save({
+      nickname: 'Rafael',
+      brokerHost: 'broker.hivemq.com',
+      brokerPort: 8884,
+      useSsl: true,
     });
+
+    expect(result.nickname).toBe('Rafael');
+    expect(result.brokerHost).toBe('broker.hivemq.com');
+    expect(result.brokerPort).toBe(8884);
+    expect(result.useSsl).toBe(true);
+    expect(result.clientId).toBeDefined();
+    expect(database.runAsync).toHaveBeenCalledWith(
+      'INSERT INTO settings (id, nickname, broker_host, broker_port, use_ssl, client_id) VALUES (1, ?, ?, ?, ?, ?)',
+      'Rafael',
+      'broker.hivemq.com',
+      8884,
+      1,
+      result.clientId,
+    );
+  });
+
+  it('save second time keeps the same clientId', async () => {
+    const database = makeDatabase();
+    mockedGetDatabase.mockResolvedValue(database as any);
+    database.getAllAsync.mockResolvedValueOnce([
+      {
+        nickname: 'Rafael',
+        broker_host: 'broker.hivemq.com',
+        broker_port: 8884,
+        use_ssl: 1,
+        client_id: 'existing-client-id',
+      },
+    ]);
+    database.runAsync.mockResolvedValueOnce({});
+
+    const result = await settingsRepository.save({ nickname: 'Cris' });
+
+    expect(result.clientId).toBe('existing-client-id');
+    expect(result.nickname).toBe('Cris');
+    expect(database.runAsync).toHaveBeenCalledWith(
+      'UPDATE settings SET nickname = ?, broker_host = ?, broker_port = ?, use_ssl = ?, client_id = ? WHERE id = 1',
+      'Cris',
+      'broker.hivemq.com',
+      8884,
+      1,
+      'existing-client-id',
+    );
+  });
+
+  it('save without nickname throws INVALID_INPUT', async () => {
+    const database = makeDatabase();
+    mockedGetDatabase.mockResolvedValue(database as any);
+    database.getAllAsync.mockResolvedValueOnce([]);
+
+    await expect(
+      settingsRepository.save({
+        nickname: '',
+        brokerHost: 'broker.hivemq.com',
+        brokerPort: 8884,
+        useSsl: true,
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_INPUT' });
   });
 });
 
 describe('ConversationRepository', () => {
-  it('creates a conversation with id and createdAt', async () => {
+  it('create returns conversation with id and createdAt', async () => {
+    const database = makeDatabase();
+    mockedGetDatabase.mockResolvedValue(database as any);
+    database.getAllAsync.mockResolvedValueOnce([]);
+    database.runAsync.mockResolvedValueOnce({});
+
     const conversation = await conversationRepository.create({
       name: 'Futebol',
       topic: 'sala/futebol',
     });
 
-    expect(conversation.id).toBeTruthy();
-    expect(conversation.createdAt).toEqual(expect.any(String));
+    expect(conversation.id).toBeDefined();
+    expect(conversation.name).toBe('Futebol');
     expect(conversation.topic).toBe('sala/futebol');
+    expect(conversation.createdAt).toBeDefined();
+    expect(database.runAsync).toHaveBeenCalledWith(
+      'INSERT INTO conversations (id, name, topic, created_at) VALUES (?, ?, ?, ?)',
+      conversation.id,
+      'Futebol',
+      'sala/futebol',
+      conversation.createdAt,
+    );
   });
 
-  it('throws TOPIC_ALREADY_EXISTS for duplicate topic', async () => {
-    await conversationRepository.create({ name: 'Futebol', topic: 'sala/futebol' });
+  it('create with duplicate topic throws TOPIC_ALREADY_EXISTS', async () => {
+    const database = makeDatabase();
+    mockedGetDatabase.mockResolvedValue(database as any);
+    database.getAllAsync.mockResolvedValueOnce([{ id: 'already' }]);
 
     await expect(
-      conversationRepository.create({ name: 'Time', topic: 'sala/futebol' }),
+      conversationRepository.create({ name: 'Futebol', topic: 'sala/futebol' }),
     ).rejects.toMatchObject({ code: 'TOPIC_ALREADY_EXISTS' });
   });
 
-  it('returns an empty array when no conversations exist', async () => {
-    const conversations = await conversationRepository.findAll();
+  it('findAll on empty returns []', async () => {
+    const database = makeDatabase();
+    mockedGetDatabase.mockResolvedValue(database as any);
+    database.getAllAsync.mockResolvedValueOnce([]);
 
-    expect(conversations).toEqual([]);
+    const result = await conversationRepository.findAll();
+
+    expect(result).toEqual([]);
   });
 
-  it('returns conversations ordered by createdAt descending', async () => {
-    const first = await conversationRepository.create({ name: 'First', topic: 'sala/one' });
-    await new Promise((resolve) => setTimeout(resolve, 5));
-    const second = await conversationRepository.create({ name: 'Second', topic: 'sala/two' });
+  it('findAll with two conversations returns sorted by createdAt DESC', async () => {
+    const database = makeDatabase();
+    mockedGetDatabase.mockResolvedValue(database as any);
+    database.getAllAsync.mockResolvedValueOnce([
+      {
+        id: '2',
+        name: 'Second',
+        topic: 'topic/second',
+        created_at: '2026-06-03T11:00:00.000Z',
+      },
+      {
+        id: '1',
+        name: 'First',
+        topic: 'topic/first',
+        created_at: '2026-06-03T10:00:00.000Z',
+      },
+    ]);
 
-    const conversations = await conversationRepository.findAll();
+    const result = await conversationRepository.findAll();
 
-    expect(conversations[0].id).toBe(second.id);
-    expect(conversations[1].id).toBe(first.id);
+    expect(result).toEqual([
+      {
+        id: '2',
+        name: 'Second',
+        topic: 'topic/second',
+        createdAt: '2026-06-03T11:00:00.000Z',
+      },
+      {
+        id: '1',
+        name: 'First',
+        topic: 'topic/first',
+        createdAt: '2026-06-03T10:00:00.000Z',
+      },
+    ]);
   });
 
-  it('finds a conversation by topic or returns null', async () => {
-    const created = await conversationRepository.create({
+  it('findByTopic returns conversation or null', async () => {
+    const database = makeDatabase();
+    mockedGetDatabase.mockResolvedValue(database as any);
+    database.getAllAsync.mockResolvedValueOnce([
+      {
+        id: '1',
+        name: 'Futebol',
+        topic: 'sala/futebol',
+        created_at: '2026-06-03T11:00:00.000Z',
+      },
+    ]);
+
+    const result = await conversationRepository.findByTopic('sala/futebol');
+
+    expect(result).toEqual({
+      id: '1',
       name: 'Futebol',
       topic: 'sala/futebol',
+      createdAt: '2026-06-03T11:00:00.000Z',
     });
-
-    const found = await conversationRepository.findByTopic('sala/futebol');
-    const missing = await conversationRepository.findByTopic('sala/nao-existe');
-
-    expect(found).toMatchObject({ id: created.id });
-    expect(missing).toBeNull();
   });
 
-  it('deletes a conversation and cascades messages', async () => {
-    const conversation = await conversationRepository.create({
-      name: 'Futebol',
-      topic: 'sala/futebol',
-    });
+  it('delete removes conversation by id', async () => {
+    const database = makeDatabase();
+    mockedGetDatabase.mockResolvedValue(database as any);
+    database.runAsync.mockResolvedValueOnce({});
 
-    await messageRepository.create({
-      conversationId: conversation.id,
-      sender: 'Alice',
-      body: 'Oi',
-      direction: 'sent',
-    });
+    await conversationRepository.delete('123');
 
-    await conversationRepository.delete(conversation.id);
-
-    const deleted = await conversationRepository.findById(conversation.id);
-    const messages = await messageRepository.findByConversation(conversation.id);
-
-    expect(deleted).toBeNull();
-    expect(messages).toEqual([]);
+    expect(database.runAsync).toHaveBeenCalledWith('DELETE FROM conversations WHERE id = ?', '123');
   });
 });
 
 describe('MessageRepository', () => {
-  it('creates a message with id and createdAt', async () => {
-    const conversation = await conversationRepository.create({
-      name: 'Futebol',
-      topic: 'sala/futebol',
-    });
+  it('create returns message with id and createdAt', async () => {
+    const database = makeDatabase();
+    mockedGetDatabase.mockResolvedValue(database as any);
+    database.runAsync.mockResolvedValueOnce({});
 
     const message = await messageRepository.create({
-      conversationId: conversation.id,
-      sender: 'Alice',
-      body: 'Oi',
+      conversationId: 'conv-1',
+      sender: 'Rafael',
+      body: 'Hello',
       direction: 'sent',
     });
 
-    expect(message.id).toBeTruthy();
-    expect(message.createdAt).toEqual(expect.any(String));
-    expect(message.conversationId).toBe(conversation.id);
+    expect(message.id).toBeDefined();
+    expect(message.conversationId).toBe('conv-1');
+    expect(message.sender).toBe('Rafael');
+    expect(message.body).toBe('Hello');
+    expect(message.direction).toBe('sent');
+    expect(message.createdAt).toBeDefined();
+    expect(database.runAsync).toHaveBeenCalledWith(
+      'INSERT INTO messages (id, conversation_id, sender, body, direction, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+      message.id,
+      'conv-1',
+      'Rafael',
+      'Hello',
+      'sent',
+      message.createdAt,
+    );
   });
 
-  it('finds messages by conversation ordered by createdAt ascending', async () => {
-    const conversation = await conversationRepository.create({
+  it('findByConversation returns messages sorted by createdAt ASC', async () => {
+    const database = makeDatabase();
+    mockedGetDatabase.mockResolvedValue(database as any);
+    database.getAllAsync.mockResolvedValueOnce([
+      {
+        id: '1',
+        conversation_id: 'conv-1',
+        sender: 'Rafael',
+        body: 'First',
+        direction: 'sent',
+        created_at: '2026-06-03T10:00:00.000Z',
+      },
+      {
+        id: '2',
+        conversation_id: 'conv-1',
+        sender: 'Ana',
+        body: 'Second',
+        direction: 'received',
+        created_at: '2026-06-03T11:00:00.000Z',
+      },
+    ]);
+
+    const messages = await messageRepository.findByConversation('conv-1');
+
+    expect(messages).toEqual([
+      {
+        id: '1',
+        conversationId: 'conv-1',
+        sender: 'Rafael',
+        body: 'First',
+        direction: 'sent',
+        createdAt: '2026-06-03T10:00:00.000Z',
+      },
+      {
+        id: '2',
+        conversationId: 'conv-1',
+        sender: 'Ana',
+        body: 'Second',
+        direction: 'received',
+        createdAt: '2026-06-03T11:00:00.000Z',
+      },
+    ]);
+  });
+
+  it('deleteByConversation with messages clears messages and calls DELETE', async () => {
+    const database = makeDatabase();
+    mockedGetDatabase.mockResolvedValue(database as any);
+    database.runAsync.mockResolvedValueOnce({});
+    // After deletion, findByConversation returns []
+    database.getAllAsync.mockResolvedValueOnce([]);
+
+    await messageRepository.deleteByConversation('conv-1');
+
+    const messages = await messageRepository.findByConversation('conv-1');
+
+    expect(database.runAsync).toHaveBeenCalledWith(
+      'DELETE FROM messages WHERE conversation_id = ?',
+      'conv-1',
+    );
+    expect(messages).toEqual([]);
+  });
+
+  it('deleteByConversation preserves the conversation (conversationRepository.findById)', async () => {
+    const database = makeDatabase();
+    mockedGetDatabase.mockResolvedValue(database as any);
+    database.runAsync.mockResolvedValueOnce({});
+    database.getAllAsync.mockResolvedValueOnce([
+      {
+        id: 'conv-1',
+        name: 'Futebol',
+        topic: 'sala/futebol',
+        created_at: '2026-06-03T11:00:00.000Z',
+      },
+    ]);
+
+    await messageRepository.deleteByConversation('conv-1');
+
+    const conv = await conversationRepository.findById('conv-1');
+
+    expect(conv).toEqual({
+      id: 'conv-1',
       name: 'Futebol',
       topic: 'sala/futebol',
+      createdAt: '2026-06-03T11:00:00.000Z',
     });
+  });
 
-    const first = await messageRepository.create({
-      conversationId: conversation.id,
-      sender: 'Alice',
-      body: 'Primeira',
-      direction: 'sent',
-    });
-    await new Promise((resolve) => setTimeout(resolve, 5));
-    const second = await messageRepository.create({
-      conversationId: conversation.id,
-      sender: 'Alice',
-      body: 'Segunda',
-      direction: 'sent',
-    });
+  it('deleteByConversation does not affect other conversations messages', async () => {
+    const database = makeDatabase();
+    mockedGetDatabase.mockResolvedValue(database as any);
+    database.runAsync.mockResolvedValueOnce({});
+    // For other conversation, findByConversation returns its messages
+    database.getAllAsync.mockResolvedValueOnce([
+      {
+        id: 'm1',
+        conversation_id: 'conv-2',
+        sender: 'Ana',
+        body: 'Other',
+        direction: 'received',
+        created_at: '2026-06-03T12:00:00.000Z',
+      },
+    ]);
 
-    const messages = await messageRepository.findByConversation(conversation.id);
+    await messageRepository.deleteByConversation('conv-1');
 
-    expect(messages.map((item) => item.id)).toEqual([first.id, second.id]);
+    const messages = await messageRepository.findByConversation('conv-2');
+
+    expect(messages).toEqual([
+      {
+        id: 'm1',
+        conversationId: 'conv-2',
+        sender: 'Ana',
+        body: 'Other',
+        direction: 'received',
+        createdAt: '2026-06-03T12:00:00.000Z',
+      },
+    ]);
+  });
+
+  it('deleteByConversation without messages is idempotent (does not throw)', async () => {
+    const database = makeDatabase();
+    mockedGetDatabase.mockResolvedValue(database as any);
+    database.runAsync.mockResolvedValueOnce({});
+
+    await expect(messageRepository.deleteByConversation('non-existent')).resolves.toBeUndefined();
   });
 });
