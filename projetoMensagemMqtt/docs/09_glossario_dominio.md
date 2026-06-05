@@ -11,6 +11,7 @@
 | Status da conexão | Estado atual da ligação com o broker. | "estado", "conexão" (isolado) | "O status mudou para conectado." |
 | Limpar histórico | *(v1.1)* Apagar todas as mensagens de uma conversa, mantendo a conversa e a assinatura do tópico. | "apagar conversa", "excluir conversa" | "Limpar o histórico não remove a conversa." |
 | Excluir conversa | Remover a conversa, seu histórico e cancelar a assinatura do tópico. | "limpar conversa" | "Excluir a conversa some com ela da lista." |
+| Renomear conversa | *(v1.2)* Alterar o nome de exibição de uma conversa sem modificar o tópico MQTT, o histórico ou a assinatura. | "editar conversa", "atualizar conversa" | "Renomear não muda o tópico da conversa." |
 
 ## 2. Termos técnicos
 
@@ -36,6 +37,7 @@
 |---|---|---|
 | "Conexão" | Refere-se sempre à única conexão MQTT do app; nunca "uma por conversa". | 2026-06-03 |
 | "Sala" / "Conversa" | Usar sempre "Conversa" no código e na UI; "sala" só como explicação informal. | 2026-06-03 |
+| "Renomear" vs "Editar" | Usar sempre "Renomear" quando a operação altera apenas o `name`; "editar" é genérico e ambíguo. | 2026-06-05 |
 
 ## Pedido para o Agente Documentador
 Manter consistente. Toda nova definição passa por validação humana.

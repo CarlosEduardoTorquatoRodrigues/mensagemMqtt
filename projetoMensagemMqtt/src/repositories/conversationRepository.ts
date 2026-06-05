@@ -12,6 +12,7 @@ export interface ConversationRepository {
   findById(id: string): Promise<Conversation | null>;
   findByTopic(topic: string): Promise<Conversation | null>;
   delete(id: string): Promise<void>;
+  rename(id: string, name: string): Promise<Conversation>;
 }
 
 export const conversationRepository: ConversationRepository = {
@@ -105,5 +106,28 @@ export const conversationRepository: ConversationRepository = {
   async delete(id) {
     const database = await getDatabase();
     await database.runAsync('DELETE FROM conversations WHERE id = ?', id);
+  },
+
+  async rename(id, name) {
+    const trimmedName = name.trim();
+
+    if (!trimmedName) {
+      throw createAppError('INVALID_INPUT', 'Conversation name cannot be empty');
+    }
+
+    const database = await getDatabase();
+    const existing = await database.getAllAsync<{ id: string }>(
+      'SELECT id FROM conversations WHERE id = ? LIMIT 1',
+      id,
+    );
+
+    if (existing.length === 0) {
+      throw createAppError('INVALID_INPUT', `Conversation with id ${id} not found`);
+    }
+
+    await database.runAsync('UPDATE conversations SET name = ? WHERE id = ?', trimmedName, id);
+
+    const updated = await this.findById(id);
+    return updated!;
   },
 };

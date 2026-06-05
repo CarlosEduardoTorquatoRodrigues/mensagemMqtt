@@ -23,17 +23,13 @@ export default function App() {
   const handleIncomingMessage = useCallback(
     async (topic: string, payload: { clientId: string; sender: string; body: string; sentAt: string }) => {
       const conversation = await conversationRepository.findByTopic(topic);
-      if (!conversation) {
-        return;
-      }
-
+      if (!conversation) return;
       await messageRepository.create({
         conversationId: conversation.id,
         sender: payload.sender,
         body: payload.body,
         direction: 'received',
       });
-
       if (selectedConversation?.id === conversation.id) {
         setRefreshKey((prev) => prev + 1);
       }
@@ -45,49 +41,21 @@ export default function App() {
 
   useEffect(() => {
     let mounted = true;
-
-    settingsRepository
-      .get()
-      .then((saved) => {
-        if (!mounted) {
-          return;
-        }
-
-        if (saved) {
-          setSettings(saved);
-          setScreen('conversations');
-        } else {
-          setScreen('settings');
-        }
-      })
-      .finally(() => {
-        if (mounted) {
-          setLoadingSettings(false);
-        }
-      });
-
-    return () => {
-      mounted = false;
-    };
+    settingsRepository.get().then((saved) => {
+      if (!mounted) return;
+      if (saved) { setSettings(saved); setScreen('conversations'); }
+      else setScreen('settings');
+    }).finally(() => { if (mounted) setLoadingSettings(false); });
+    return () => { mounted = false; };
   }, []);
 
   useEffect(() => {
-    if (!settings) {
-      setTopics([]);
-      return;
-    }
-
+    if (!settings) { setTopics([]); return; }
     let mounted = true;
-
     conversationRepository.findAll().then((conversations) => {
-      if (mounted) {
-        setTopics(conversations.map((item) => item.topic));
-      }
+      if (mounted) setTopics(conversations.map((c) => c.topic));
     });
-
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, [settings?.clientId]);
 
   const handleSaveSettings = async (input: Partial<Omit<Settings, 'clientId'>>) => {
@@ -104,26 +72,17 @@ export default function App() {
   };
 
   const handleConversationDeleted = (topic: string) => {
-    setTopics((prev) => prev.filter((item) => item !== topic));
+    setTopics((prev) => prev.filter((t) => t !== topic));
     if (selectedConversation?.topic === topic) {
       setSelectedConversation(null);
       setScreen('conversations');
     }
   };
 
-  const handleOpenChat = (conversation: Conversation) => {
-    setSelectedConversation(conversation);
-    setScreen('chat');
-  };
-
-  const handleBackToConversations = () => {
-    setScreen('conversations');
-  };
-
   if (loadingSettings) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color="#3b82f6" />
       </SafeAreaView>
     );
   }
@@ -136,13 +95,13 @@ export default function App() {
             settings={settings}
             status={mqtt.status}
             onSave={handleSaveSettings}
-            onBack={settings ? handleBackToConversations : undefined}
+            onBack={settings ? () => setScreen('conversations') : undefined}
           />
         ) : screen === 'conversations' ? (
           <ConversationsScreen
             status={mqtt.status}
             onOpenSettings={() => setScreen('settings')}
-            onOpenChat={handleOpenChat}
+            onOpenChat={(c) => { setSelectedConversation(c); setScreen('chat'); }}
             onConversationCreated={handleConversationCreated}
             onConversationDeleted={handleConversationDeleted}
           />
@@ -152,7 +111,7 @@ export default function App() {
             settings={settings}
             status={mqtt.status}
             sendMessage={mqtt.sendMessage}
-            onBack={handleBackToConversations}
+            onBack={() => setScreen('conversations')}
             refreshKey={refreshKey}
           />
         ) : null}
@@ -162,15 +121,11 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#f7f8fb',
-  },
-  container: {
-    flex: 1,
-  },
+  safeArea: { flex: 1, backgroundColor: '#0f172a' },
+  container: { flex: 1, backgroundColor: '#0f172a' },
   loadingContainer: {
     flex: 1,
+    backgroundColor: '#0f172a',
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -125,6 +125,10 @@ export interface ConversationRepository {
 
   // Remove a conversa; mensagens caem por cascata (RN06).
   delete(id: string): Promise<void>;
+
+  // (v1.2) Renomeia a conversa, alterando apenas o campo name. RN12.
+  // Lança AppError INVALID_INPUT se name for vazio/só espaços ou se id não existir.
+  rename(id: string, name: string): Promise<Conversation>;
 }
 ```
 

@@ -15,6 +15,8 @@ Formato: Data | Agente | Versão do prompt | Artefato | Validador | Status
 | 2026-06-03 | Humano | — | Convenção de testes de frontend fixada (docs/06 §5.0, docs/07, prompt do Agente Front-end, roteiro Etapa 2 passos 7-8): usar @testing-library/react-native (nunca @testing-library/react) + jest-expo + react-test-renderer@19.1.0, com jest.mock de expo-sqlite/mqtt/repositórios/useMqtt. Resolve ERESOLVE (react@18 vs 19) e "Can't access .root on unmounted test renderer" | Rafael | PRONTO PARA VALIDAÇÃO |
 | 2026-06-03 | Humano | — | Runner de teste fixado: Jest (jest-expo) via `npm test`; NUNCA vitest (causa "Unexpected token 'typeof'"). Atualizado docs/06 §5.0, docs/07, roteiro (Etapa 5 + erros comuns) e prompt do Agente QA | Rafael | PRONTO PARA VALIDAÇÃO |
 | 2026-06-04 | QA | 1.0 | docs/07 + testes de arquitetura, v1.1 back-end e v1.1 front-end (`npm test`, `npx tsc --noEmit`) — 35 testes | QA | APROVADO |
+| 2026-06-05 | QA | 1.0 | docs/07 + validação v1.2 renomear conversa (`npm test`, `npx tsc --noEmit`) — 45 testes | GitHub Copilot | APROVADO |
+| 2026-06-05 | Documentador | 1.0 | Fechamento da fase v1.2: back-end e front-end renomear conversa implementados/testados; QA real aprovado | GitHub Copilot | CONCLUÍDO |
 | 2026-06-04 | Documentador | 1.0 | Fechamento da fase v1.1: back-end (limpar histórico) e front-end (limpar histórico) implementados/testados; QA real aprovado | GitHub Copilot | CONCLUÍDO |
 | 2026-06-03 | Humano | — | RNF08: teclado do celular cobria o TextInput no Chat. ChatScreen passa a usar KeyboardAvoidingView + FlatList (keyboardShouldPersistTaps). Atualizado docs/02 (RNF08), docs/06 (ChatScreen, experiência, validação manual, critérios) e prompt do Agente Front-end | Rafael | PRONTO PARA VALIDAÇÃO |
 
@@ -28,6 +30,7 @@ Formato: Data | Agente | Versão do prompt | Artefato | Validador | Status
 | Conversas e chat (front-end) | v1.0 | implementado | aprovado | Front-end |
 | Limpar histórico (back-end) | v1.1 | implementado | aprovado | Back-end |
 | Limpar histórico (front-end) | v1.1 | implementado | aprovado | Front-end |
+| Renomear conversa (back-end + front-end) | v1.2 | implementado | aprovado | QA |
 
 ## 3. Pendências ativas
 | Tag | Agente que abriu | Data | Status |
@@ -60,15 +63,16 @@ Formato: Data | Agente | Versão do prompt | Artefato | Validador | Status
 |---|---|---|
 | v1.0 (fechado) | Dados e mensageria; Conversas e chat | 2026-06-04 |
 | v1.1 (fechado) | Limpar histórico (back-end + front-end) | 2026-06-04 |
+| v1.2 (fechado) | Renomear conversa (back-end + front-end) | 2026-06-05 |
 
 ## 8. Resumo para validação humana
 - **Agente responsável:** Agente Documentador
 - **Validador humano:** GitHub Copilot
-- **Data:** 2026-06-04
+- **Data:** 2026-06-05
 - **Itens consolidados neste ciclo:**
-	- Back-end (limpar histórico): implementação e testes de exclusão de conversa, repositório deleteByConversation, e manutenção de integridade de dados conforme docs/04 e docs/05.
-	- Front-end (limpar histórico): implementação da funcionalidade de limpar histórico no app e verificação de comportamento da interface de Conversas e Chat conforme docs/06.
-	- QA: execução de testes automatizados (`npm test`, `npx tsc --noEmit`) e verificação manual de operações de limpeza de histórico; resultado aprovado.
+	- Back-end (renomear conversa): implementação e testes de renomeação de conversa no repositório e validação da lógica de persistência e UI conforme docs/04 e docs/05.
+	- Front-end (renomear conversa): implementação da funcionalidade de renomear conversa na interface, incluindo validação de nome e atualização em Conversas/Chat conforme docs/06.
+	- QA: execução de testes automatizados (`npm test`, `npx tsc --noEmit`) e verificação real do caso v1.2; 45 testes concluídos e aprovados.
 - **Status de validação:** APROVADO POR QA
 
-ASSINATURA: Agente Documentador | 2026-06-04 | v1.0
+ASSINATURA: Agente Documentador | 2026-06-05 | v1.0

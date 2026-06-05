@@ -38,22 +38,6 @@ export default function ChatScreen({
   const [confirmClearVisible, setConfirmClearVisible] = useState(false);
   const flatListRef = useRef<FlatList<Message>>(null);
 
-  const handleClearConfirmed = async () => {
-    setConfirmClearVisible(false);
-    setError(null);
-    setMessages([]);
-    try {
-      await messageRepository.deleteByConversation(conversation.id);
-      await loadMessages();
-    } catch {
-      setError('Não foi possível limpar o histórico.');
-    }
-  };
-
-  const handleClear = () => {
-    setConfirmClearVisible(true);
-  };
-
   const loadMessages = async () => {
     setLoading(true);
     try {
@@ -66,31 +50,35 @@ export default function ChatScreen({
     }
   };
 
-  useEffect(() => {
-    loadMessages();
-  }, [conversation.id, refreshKey]);
+  useEffect(() => { loadMessages(); }, [conversation.id, refreshKey]);
 
   useEffect(() => {
-    if (messages.length > 0) {
-      flatListRef.current?.scrollToEnd({ animated: true });
-    }
+    if (messages.length > 0) flatListRef.current?.scrollToEnd({ animated: true });
   }, [messages]);
+
+  const handleClearConfirmed = async () => {
+    setConfirmClearVisible(false);
+    setError(null);
+    setMessages([]);
+    try {
+      await messageRepository.deleteByConversation(conversation.id);
+      await loadMessages();
+    } catch {
+      setError('Não foi possível limpar o histórico.');
+    }
+  };
 
   const handleSend = async () => {
     setError(null);
     const trimmed = body.trim();
-    if (!trimmed) {
-      setError('Digite uma mensagem antes de enviar.');
-      return;
-    }
+    if (!trimmed) { setError('Digite uma mensagem antes de enviar.'); return; }
 
-    const message: Message = await messageRepository.create({
+    const message = await messageRepository.create({
       conversationId: conversation.id,
       sender: settings.nickname,
       body: trimmed,
       direction: 'sent',
     });
-
     setMessages((prev) => [...prev, message]);
     setBody('');
     sendMessage(conversation.topic, {
@@ -107,39 +95,77 @@ export default function ChatScreen({
       style={styles.flex}
     >
       <View style={styles.container}>
-        <View style={styles.headerRow}>
-          <TouchableOpacity onPress={onBack} style={styles.backButton}>
-            <Text style={styles.backText}>Voltar</Text>
+
+        {/* Cabeçalho */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={onBack}
+            style={styles.backBtn}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel="Voltar para lista de conversas"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={styles.backBtnText}>←</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>{conversation.name}</Text>
-          <TouchableOpacity onPress={handleClear} style={styles.clearButton}>
-            <Text style={styles.clearText}>Limpar</Text>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle} numberOfLines={1}>{conversation.name}</Text>
+            <Text style={styles.headerTopic} numberOfLines={1}>{conversation.topic}</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => setConfirmClearVisible(true)}
+            style={styles.clearBtn}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel="Limpar histórico de mensagens"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={styles.clearBtnText}>X</Text>
           </TouchableOpacity>
         </View>
+
         <StatusIndicator status={status} />
+
+        {/* Banner de confirmação de limpeza */}
         {confirmClearVisible ? (
-          <View style={styles.confirmContainer}>
+          <View style={styles.confirmBanner}>
             <Text style={styles.confirmText}>
-              Apagar todas as mensagens desta conversa? A conversa será mantida.
+              Apagar todas as mensagens? A conversa será mantida.
             </Text>
-            <View style={styles.confirmButtons}>
+            <View style={styles.confirmActions}>
               <TouchableOpacity
+                style={[styles.confirmBtn, styles.confirmBtnCancel]}
                 onPress={() => setConfirmClearVisible(false)}
-                style={styles.cancelButton}
+                accessible
+                accessibilityRole="button"
+                accessibilityLabel="Cancelar limpeza"
               >
-                <Text style={styles.cancelText}>Cancelar</Text>
+                <Text style={styles.confirmBtnCancelText}>Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity
+                style={[styles.confirmBtn, styles.confirmBtnDelete]}
                 onPress={handleClearConfirmed}
-                style={styles.confirmButton}
+                accessible
+                accessibilityRole="button"
+                accessibilityLabel="Confirmar limpeza do histórico"
               >
-                <Text style={styles.confirmButtonText}>Apagar</Text>
+                <Text style={styles.confirmBtnDeleteText}>Apagar</Text>
               </TouchableOpacity>
             </View>
           </View>
         ) : null}
+
+        {/* Mensagens */}
         {loading ? (
-          <Text style={styles.loadingText}>Carregando mensagens...</Text>
+          <View style={styles.centered}>
+            <Text style={styles.loadingText}>Carregando mensagens…</Text>
+          </View>
+        ) : messages.length === 0 ? (
+          <View style={styles.centered}>
+            <Text style={styles.emptyIcon}>✉️</Text>
+            <Text style={styles.emptyTitle}>Sem mensagens</Text>
+            <Text style={styles.emptyHint}>Seja o primeiro a escrever!</Text>
+          </View>
         ) : (
           <FlatList
             ref={flatListRef}
@@ -148,141 +174,161 @@ export default function ChatScreen({
             renderItem={({ item }) => <MessageBubble message={item} />}
             contentContainerStyle={styles.list}
             keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
           />
         )}
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+
+        {/* Erro */}
+        {error ? (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>⚠ {error}</Text>
+          </View>
+        ) : null}
+
+        {/* Input de envio */}
         <View style={styles.inputRow}>
           <TextInput
             style={styles.input}
-            placeholder="Digite sua mensagem"
+            placeholder="Mensagem…"
+            placeholderTextColor="#475569"
             value={body}
             onChangeText={setBody}
             editable={!loading}
             multiline
+            accessible
+            accessibilityLabel="Campo de mensagem"
+            onSubmitEditing={handleSend}
           />
-          <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
-            <Text style={styles.sendText}>Enviar</Text>
+          <TouchableOpacity
+            style={[styles.sendBtn, !body.trim() && styles.sendBtnDisabled]}
+            onPress={handleSend}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel="Enviar mensagem"
+          >
+            <Text style={styles.sendBtnText}>↑</Text>
           </TouchableOpacity>
         </View>
+
       </View>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-    padding: 20,
-  },
-  headerRow: {
+  flex: { flex: 1, backgroundColor: '#2e788171' },
+  container: { flex: 1, paddingTop: 20 },
+
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
+    paddingHorizontal: 16,
+    marginBottom: 8,
+    gap: 12,
   },
-  backButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#1e293b',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#334155',
   },
-  backText: {
-    color: '#4b7bec',
-    fontWeight: '700',
+  backBtnText: { color: '#0b7525', fontSize: 20, fontWeight: '700', lineHeight: 24 },
+  headerCenter: { flex: 1, minWidth: 0 },
+  headerTitle: { fontSize: 17, fontWeight: '800', color: '#f1f5f9' },
+  headerTopic: { fontSize: 11, color: '#8feb18', fontFamily: 'monospace', marginTop: 1 },
+  clearBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#1e293b',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#334155',
   },
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#222',
+  clearBtnText: { fontSize: 18 },
+
+  confirmBanner: {
+    backgroundColor: '#1e293b',
+    marginHorizontal: 16,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(239,68,68,0.35)',
   },
-  placeholder: {
-    width: 64,
-  },
-  loadingText: {
+  confirmText: { color: '#cbd5e1', fontSize: 13, marginBottom: 12, lineHeight: 19 },
+  confirmActions: { flexDirection: 'row', gap: 10 },
+  confirmBtn: {
     flex: 1,
-    textAlign: 'center',
-    marginTop: 24,
-    color: '#555',
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
   },
-  list: {
-    paddingBottom: 16,
+  confirmBtnCancel: { backgroundColor: '#0f172a', borderWidth: 1, borderColor: '#334155' },
+  confirmBtnCancelText: { color: '#94a3b8', fontWeight: '700', fontSize: 13 },
+  confirmBtnDelete: { backgroundColor: '#ef4444' },
+  confirmBtnDeleteText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  loadingText: { color: '#64748b', fontSize: 14 },
+  emptyIcon: { fontSize: 40, marginBottom: 10 },
+  emptyTitle: { fontSize: 17, fontWeight: '700', color: '#f1f5f9', marginBottom: 4 },
+  emptyHint: { fontSize: 13, color: '#64748b' },
+
+  list: { paddingTop: 8, paddingBottom: 16 },
+
+  errorBox: {
+    backgroundColor: 'rgba(239,68,68,0.1)',
+    borderRadius: 10,
+    padding: 10,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(239,68,68,0.3)',
   },
+  errorText: { color: '#fca5a5', fontSize: 13 },
+
   inputRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    paddingTop: 12,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: Platform.OS === 'ios' ? 8 : 16,
     borderTopWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#1e293b',
+    gap: 10,
   },
   input: {
     flex: 1,
     minHeight: 48,
     maxHeight: 120,
+    backgroundColor: '#1e293b',
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 14,
-    padding: 12,
-    backgroundColor: '#fff',
-    marginRight: 10,
+    borderColor: '#334155',
+    borderRadius: 24,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    color: '#f1f5f9',
+    fontSize: 15,
   },
-  sendButton: {
-    backgroundColor: '#4b7bec',
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+  sendBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#0b7525',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0b7525',
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 5,
   },
-  sendText: {
-    color: '#fff',
-    fontWeight: '700',
-  },
-  error: {
-    color: '#e74c3c',
-    marginTop: 10,
-  },
-  clearButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-  },
-  clearText: {
-    color: '#e74c3c',
-    fontWeight: '700',
-  },
-  confirmContainer: {
-    backgroundColor: '#fff9f8',
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#f5c6cb',
-    marginBottom: 10,
-  },
-  confirmText: {
-    color: '#333',
-    marginBottom: 12,
-  },
-  confirmButtons: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-  },
-  cancelButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    marginRight: 8,
-    borderRadius: 12,
-    backgroundColor: '#ecf0f1',
-  },
-  cancelText: {
-    color: '#333',
-    fontWeight: '700',
-  },
-  confirmButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    backgroundColor: '#e74c3c',
-  },
-  confirmButtonText: {
-    color: '#fff',
-    fontWeight: '700',
-  },
+  sendBtnDisabled: { backgroundColor: '#1e293b', shadowOpacity: 0, elevation: 0 },
+  sendBtnText: { color: '#fff', fontSize: 22, fontWeight: '800', lineHeight: 26 },
 });

@@ -212,6 +212,104 @@ describe('ConversationRepository', () => {
 
     expect(database.runAsync).toHaveBeenCalledWith('DELETE FROM conversations WHERE id = ?', '123');
   });
+
+  it('rename with valid name returns conversation with new name and preserves topic', async () => {
+    const database = makeDatabase();
+    mockedGetDatabase.mockResolvedValue(database as any);
+    database.getAllAsync.mockResolvedValueOnce([{ id: 'conv-1' }]); // Conversation exists
+    database.runAsync.mockResolvedValueOnce({}); // UPDATE succeeded
+    database.getAllAsync.mockResolvedValueOnce([
+      {
+        id: 'conv-1',
+        name: 'Novo Nome',
+        topic: 'sala/futebol',
+        created_at: '2026-06-03T11:00:00.000Z',
+      },
+    ]); // findById returns updated conversation
+
+    const result = await conversationRepository.rename('conv-1', 'Novo Nome');
+
+    expect(result.name).toBe('Novo Nome');
+    expect(result.topic).toBe('sala/futebol');
+    expect(result.id).toBe('conv-1');
+    expect(database.runAsync).toHaveBeenCalledWith(
+      'UPDATE conversations SET name = ? WHERE id = ?',
+      'Novo Nome',
+      'conv-1',
+    );
+  });
+
+  it('rename with empty name throws INVALID_INPUT', async () => {
+    const database = makeDatabase();
+    mockedGetDatabase.mockResolvedValue(database as any);
+
+    await expect(conversationRepository.rename('conv-1', '')).rejects.toMatchObject({
+      code: 'INVALID_INPUT',
+    });
+  });
+
+  it('rename with only spaces throws INVALID_INPUT', async () => {
+    const database = makeDatabase();
+    mockedGetDatabase.mockResolvedValue(database as any);
+
+    await expect(conversationRepository.rename('conv-1', '   ')).rejects.toMatchObject({
+      code: 'INVALID_INPUT',
+    });
+  });
+
+  it('rename with non-existent id throws INVALID_INPUT', async () => {
+    const database = makeDatabase();
+    mockedGetDatabase.mockResolvedValue(database as any);
+    database.getAllAsync.mockResolvedValueOnce([]); // Conversation not found
+
+    await expect(conversationRepository.rename('non-existent', 'New Name')).rejects.toMatchObject({
+      code: 'INVALID_INPUT',
+    });
+  });
+
+  it('rename preserves messages (messageRepository.findByConversation returns messages after rename)', async () => {
+    const database = makeDatabase();
+    mockedGetDatabase.mockResolvedValue(database as any);
+    // Setup for rename
+    database.getAllAsync.mockResolvedValueOnce([{ id: 'conv-1' }]); // Conversation exists
+    database.runAsync.mockResolvedValueOnce({}); // UPDATE succeeded
+    database.getAllAsync.mockResolvedValueOnce([
+      {
+        id: 'conv-1',
+        name: 'Novo Nome',
+        topic: 'sala/futebol',
+        created_at: '2026-06-03T11:00:00.000Z',
+      },
+    ]); // findById for rename
+
+    // Perform rename
+    await conversationRepository.rename('conv-1', 'Novo Nome');
+
+    // Setup for findByConversation
+    database.getAllAsync.mockResolvedValueOnce([
+      {
+        id: 'm1',
+        conversation_id: 'conv-1',
+        sender: 'Rafael',
+        body: 'Test message',
+        direction: 'sent',
+        created_at: '2026-06-03T10:00:00.000Z',
+      },
+    ]);
+
+    const messages = await messageRepository.findByConversation('conv-1');
+
+    expect(messages).toEqual([
+      {
+        id: 'm1',
+        conversationId: 'conv-1',
+        sender: 'Rafael',
+        body: 'Test message',
+        direction: 'sent',
+        createdAt: '2026-06-03T10:00:00.000Z',
+      },
+    ]);
+  });
 });
 
 describe('MessageRepository', () => {

@@ -2,11 +2,11 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { ConnectionStatus } from '../types';
 
-const statusConfig: Record<ConnectionStatus, { label: string; color: string }> = {
-  connected: { label: 'Conectado', color: '#2ecc71' },
-  connecting: { label: 'Conectando', color: '#f1c40f' },
-  disconnected: { label: 'Desconectado', color: '#e67e22' },
-  error: { label: 'Erro de conexão', color: '#e74c3c' },
+const statusConfig: Record<ConnectionStatus, { label: string; color: string; bg: string }> = {
+  connected:    { label: 'Conectado',      color: '#22c55e', bg: 'rgba(34,197,94,0.12)'  },
+  connecting:   { label: 'Conectando…',    color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
+  disconnected: { label: 'Desconectado',   color: '#94a3b8', bg: 'rgba(148,163,184,0.12)'},
+  error:        { label: 'Erro de conexão',color: '#ef4444', bg: 'rgba(239,68,68,0.12)'  },
 };
 
 interface Props {
@@ -14,30 +14,39 @@ interface Props {
 }
 
 export function StatusIndicator({ status }: Props) {
-  const config = statusConfig[status];
-
+  const cfg = statusConfig[status];
   return (
-    <View style={styles.container}>
-      <View style={[styles.dot, { backgroundColor: config.color }]} />
-      <Text style={styles.text}>{config.label}</Text>
+    <View
+      style={[styles.pill, { backgroundColor: cfg.bg }]}
+      accessible
+      accessibilityRole="text"
+      accessibilityLabel={`Status da conexão: ${cfg.label}`}
+    >
+      <View style={[styles.dot, { backgroundColor: cfg.color }]} />
+      <Text style={[styles.label, { color: cfg.color }]}>{cfg.label}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  pill: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 999,
+    marginBottom: 16,
   },
   dot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 7,
   },
-  text: {
-    fontSize: 14,
-    color: '#333',
+  label: {
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
 });

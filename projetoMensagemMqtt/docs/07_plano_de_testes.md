@@ -43,8 +43,9 @@ aprovado se todos os testes da sua etapa passarem e o app compilar sem erro de T
 - A05: PASSOU — tipos em `src/types/index.ts` correspondem ao contrato de domínio esperado pelo docs/04 e não adicionam abstrações fora do escopo.
 - A06: PASSOU — `App.tsx` importa `./src/polyfills` na primeira linha.
 - RF12/RN10: PASSOU — o histórico esvazia e a conversa permanece, conforme os testes de `deleteByConversation` e o fluxo de limpeza de histórico na tela de Chat.
+- RF13/RN12: PASSOU — renomeação altera apenas o campo `name` no banco de dados, preserva `topic` e não remove o histórico de mensagens; a implementação de `src/repositories/conversationRepository.ts` faz `UPDATE conversations SET name = ? WHERE id = ?`, e os testes de UI e repositório confirmam o fluxo de renomear sem alterar o tópico.
 
-- `npm test` — PASSOU: 3 suítes, 35 testes.
+- `npm test` — PASSOU: 4 suítes, 45 testes.
 - `npx tsc --noEmit` — PASSOU sem erros.
 
 **Observação:** a validação manual de integração entre duas instâncias (docs/07 §3.3) não foi realizada neste ambiente automatizado; para aprovação final do fluxo de chat, recomenda-se validação runtime em Expo.
