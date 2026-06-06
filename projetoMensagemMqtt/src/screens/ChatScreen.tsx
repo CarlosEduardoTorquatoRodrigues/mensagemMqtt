@@ -120,11 +120,13 @@ export default function ChatScreen({
             accessibilityLabel="Limpar histórico de mensagens"
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Text style={styles.clearBtnText}>X</Text>
+            <Text style={styles.clearBtnText}>🗑</Text>
           </TouchableOpacity>
         </View>
 
-        <StatusIndicator status={status} />
+        <View style={styles.statusRow}>
+          <StatusIndicator status={status} />
+        </View>
 
         {/* Banner de confirmação de limpeza */}
         {confirmClearVisible ? (
@@ -162,7 +164,9 @@ export default function ChatScreen({
           </View>
         ) : messages.length === 0 ? (
           <View style={styles.centered}>
-            <Text style={styles.emptyIcon}>✉️</Text>
+            <View style={styles.emptyIconWrap}>
+              <Text style={styles.emptyIcon}>✉️</Text>
+            </View>
             <Text style={styles.emptyTitle}>Sem mensagens</Text>
             <Text style={styles.emptyHint}>Seja o primeiro a escrever!</Text>
           </View>
@@ -190,7 +194,7 @@ export default function ChatScreen({
           <TextInput
             style={styles.input}
             placeholder="Mensagem…"
-            placeholderTextColor="#475569"
+            placeholderTextColor="#4b5563"
             value={body}
             onChangeText={setBody}
             editable={!loading}
@@ -216,80 +220,113 @@ export default function ChatScreen({
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: '#2e788171' },
+  flex: { flex: 1, backgroundColor: '#0a0f1e' },
   container: { flex: 1, paddingTop: 20 },
 
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    marginBottom: 8,
+    marginBottom: 10,
     gap: 12,
   },
   backBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#1e293b',
+    backgroundColor: '#111827',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#1f2937',
   },
-  backBtnText: { color: '#0b7525', fontSize: 20, fontWeight: '700', lineHeight: 24 },
+  backBtnText: { color: '#10b981', fontSize: 20, fontWeight: '700', lineHeight: 24 },
   headerCenter: { flex: 1, minWidth: 0 },
-  headerTitle: { fontSize: 17, fontWeight: '800', color: '#f1f5f9' },
-  headerTopic: { fontSize: 11, color: '#8feb18', fontFamily: 'monospace', marginTop: 1 },
+  headerTitle: { fontSize: 17, fontWeight: '800', color: '#f9fafb', letterSpacing: -0.2 },
+  headerTopic: {
+    fontSize: 11,
+    color: '#10b981',
+    fontFamily: 'monospace',
+    marginTop: 2,
+    opacity: 0.75,
+  },
   clearBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#1e293b',
+    backgroundColor: '#111827',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#1f2937',
   },
-  clearBtnText: { fontSize: 18 },
+  clearBtnText: { fontSize: 17 },
+
+  statusRow: {
+    paddingHorizontal: 16,
+  },
 
   confirmBanner: {
-    backgroundColor: '#1e293b',
+    backgroundColor: '#111827',
     marginHorizontal: 16,
-    borderRadius: 14,
-    padding: 14,
+    borderRadius: 16,
+    padding: 16,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: 'rgba(239,68,68,0.35)',
+    borderColor: 'rgba(248,113,113,0.25)',
+    shadowColor: '#f87171',
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
   },
-  confirmText: { color: '#cbd5e1', fontSize: 13, marginBottom: 12, lineHeight: 19 },
+  confirmText: { color: '#d1d5db', fontSize: 13, marginBottom: 14, lineHeight: 20 },
   confirmActions: { flexDirection: 'row', gap: 10 },
   confirmBtn: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingVertical: 11,
+    borderRadius: 11,
     alignItems: 'center',
   },
-  confirmBtnCancel: { backgroundColor: '#0f172a', borderWidth: 1, borderColor: '#334155' },
-  confirmBtnCancelText: { color: '#94a3b8', fontWeight: '700', fontSize: 13 },
-  confirmBtnDelete: { backgroundColor: '#ef4444' },
+  confirmBtnCancel: { backgroundColor: '#0d1117', borderWidth: 1, borderColor: '#1f2937' },
+  confirmBtnCancelText: { color: '#9ca3af', fontWeight: '700', fontSize: 13 },
+  confirmBtnDelete: {
+    backgroundColor: '#dc2626',
+    shadowColor: '#f87171',
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+  },
   confirmBtnDeleteText: { color: '#fff', fontWeight: '700', fontSize: 13 },
 
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  loadingText: { color: '#64748b', fontSize: 14 },
-  emptyIcon: { fontSize: 40, marginBottom: 10 },
-  emptyTitle: { fontSize: 17, fontWeight: '700', color: '#f1f5f9', marginBottom: 4 },
-  emptyHint: { fontSize: 13, color: '#64748b' },
+  loadingText: { color: '#6b7280', fontSize: 14 },
+  emptyIconWrap: {
+    width: 68,
+    height: 68,
+    borderRadius: 22,
+    backgroundColor: '#111827',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#1f2937',
+  },
+  emptyIcon: { fontSize: 32 },
+  emptyTitle: { fontSize: 17, fontWeight: '700', color: '#f9fafb', marginBottom: 6 },
+  emptyHint: { fontSize: 13, color: '#6b7280' },
 
-  list: { paddingTop: 8, paddingBottom: 16 },
+  list: { paddingTop: 10, paddingBottom: 20 },
 
   errorBox: {
-    backgroundColor: 'rgba(239,68,68,0.1)',
-    borderRadius: 10,
-    padding: 10,
+    backgroundColor: 'rgba(248,113,113,0.08)',
+    borderRadius: 11,
+    padding: 11,
     marginHorizontal: 16,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: 'rgba(239,68,68,0.3)',
+    borderColor: 'rgba(248,113,113,0.2)',
   },
   errorText: { color: '#fca5a5', fontSize: 13 },
 
@@ -298,37 +335,44 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     paddingHorizontal: 16,
     paddingTop: 10,
-    paddingBottom: Platform.OS === 'ios' ? 8 : 16,
+    paddingBottom: Platform.OS === 'ios' ? 10 : 18,
     borderTopWidth: 1,
-    borderColor: '#1e293b',
+    borderColor: '#111827',
     gap: 10,
+    backgroundColor: '#0a0f1e',
   },
   input: {
     flex: 1,
     minHeight: 48,
     maxHeight: 120,
-    backgroundColor: '#1e293b',
+    backgroundColor: '#111827',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#1f2937',
     borderRadius: 24,
     paddingHorizontal: 18,
     paddingVertical: 12,
-    color: '#f1f5f9',
+    color: '#f9fafb',
     fontSize: 15,
   },
   sendBtn: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#0b7525',
+    backgroundColor: '#059669',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#0b7525',
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 5,
+    shadowColor: '#10b981',
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
   },
-  sendBtnDisabled: { backgroundColor: '#1e293b', shadowOpacity: 0, elevation: 0 },
+  sendBtnDisabled: {
+    backgroundColor: '#111827',
+    shadowOpacity: 0,
+    elevation: 0,
+    borderWidth: 1,
+    borderColor: '#1f2937',
+  },
   sendBtnText: { color: '#fff', fontSize: 22, fontWeight: '800', lineHeight: 26 },
 });

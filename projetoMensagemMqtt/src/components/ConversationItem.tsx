@@ -26,14 +26,14 @@ export function ConversationItem({ conversation, onPress, onLongPress, onRenameP
       style={styles.card}
       onPress={onPress}
       onLongPress={onLongPress}
-      activeOpacity={0.75}
+      activeOpacity={0.7}
       accessible
       accessibilityRole="button"
       accessibilityLabel={`Conversa ${conversation.name}, tópico ${conversation.topic}. Toque longo para opções.`}
       accessibilityHint="Toque para abrir. Toque longo para renomear ou excluir."
     >
       {/* Avatar */}
-      <View style={styles.avatar} aria-hidden>
+      <View style={styles.avatar}>
         <Text style={styles.avatarText}>{initials || '?'}</Text>
       </View>
 
@@ -63,31 +63,33 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#65661d',
-    borderRadius: 16,
+    backgroundColor: '#111827',
+    borderRadius: 18,
     paddingVertical: 14,
     paddingHorizontal: 16,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#1f2937',
     shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 3,
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
   avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#000000',
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: '#064e3b',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 14,
     flexShrink: 0,
+    borderWidth: 1.5,
+    borderColor: 'rgba(16,185,129,0.3)',
   },
   avatarText: {
-    color: '#fff',
+    color: '#34d399',
     fontWeight: '800',
     fontSize: 15,
     letterSpacing: 0.5,
@@ -99,27 +101,28 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#f1f5f9',
-    marginBottom: 3,
+    color: '#f9fafb',
+    marginBottom: 4,
   },
   topic: {
-    fontSize: 12,
-    color: '#8feb18',
+    fontSize: 11,
+    color: '#10b981',
     fontFamily: 'monospace',
-    letterSpacing: 0.3,
+    letterSpacing: 0.4,
+    opacity: 0.8,
   },
   renameBtn: {
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: '#e2dada',
+    backgroundColor: '#1f2937',
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 10,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#374151',
   },
   renameBtnText: {
-    fontSize: 15,
+    fontSize: 14,
   },
 });

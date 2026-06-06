@@ -51,7 +51,7 @@ export function SettingsScreen({ settings, status, onSave, onBack }: Props) {
     setError(null);
     setMessage(null);
     const hostErr = validateHost(brokerHost);
-    if (hostErr)         { setError(hostErr); return; }
+    if (hostErr)          { setError(hostErr); return; }
     if (!nickname.trim()) { setError('Apelido é obrigatório.'); return; }
     if (!brokerPort || Number.isNaN(brokerPort)) { setError('Porta é obrigatória.'); return; }
 
@@ -96,7 +96,7 @@ export function SettingsScreen({ settings, status, onSave, onBack }: Props) {
           <TextInput
             style={styles.input}
             placeholder="Como você quer ser chamado"
-            placeholderTextColor="#475569"
+            placeholderTextColor="#4b5563"
             value={nickname}
             onChangeText={setNickname}
             editable={!saving}
@@ -112,7 +112,7 @@ export function SettingsScreen({ settings, status, onSave, onBack }: Props) {
           <TextInput
             style={[styles.input, styles.inputMono]}
             placeholder="broker.hivemq.com"
-            placeholderTextColor="#475569"
+            placeholderTextColor="#4b5563"
             value={brokerHost}
             onChangeText={setBrokerHost}
             autoCapitalize="none"
@@ -124,7 +124,7 @@ export function SettingsScreen({ settings, status, onSave, onBack }: Props) {
           <TextInput
             style={[styles.input, styles.inputMono]}
             placeholder="8884"
-            placeholderTextColor="#475569"
+            placeholderTextColor="#4b5563"
             value={String(brokerPort)}
             onChangeText={(v) => setBrokerPort(Number(v))}
             keyboardType="numeric"
@@ -141,8 +141,8 @@ export function SettingsScreen({ settings, status, onSave, onBack }: Props) {
               value={useSsl}
               onValueChange={setUseSsl}
               disabled={saving}
-              trackColor={{ false: '#334155', true: '#0b7525' }}
-              thumbColor="#fff"
+              trackColor={{ false: '#1f2937', true: '#059669' }}
+              thumbColor={useSsl ? '#34d399' : '#9ca3af'}
               accessible
               accessibilityLabel="Usar SSL"
               accessibilityRole="switch"
@@ -183,84 +183,98 @@ export function SettingsScreen({ settings, status, onSave, onBack }: Props) {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: '#2e788171' },
-  container: { padding: 20, paddingBottom: 40 },
+  flex: { flex: 1, backgroundColor: '#0a0f1e' },
+  container: { padding: 20, paddingBottom: 48 },
 
-  header: { marginBottom: 20 },
-  backBtn: { marginBottom: 12, alignSelf: 'flex-start' },
-  backBtnText: { color: '#0b7525', fontWeight: '700', fontSize: 15 },
-  title: { fontSize: 28, fontWeight: '800', color: '#f1f5f9', marginBottom: 4 },
-  subtitle: { fontSize: 14, color: '#64748b' },
+  header: { marginBottom: 24 },
+  backBtn: { marginBottom: 16, alignSelf: 'flex-start' },
+  backBtnText: { color: '#10b981', fontWeight: '700', fontSize: 14, letterSpacing: 0.2 },
+  title: { fontSize: 30, fontWeight: '800', color: '#f9fafb', marginBottom: 6, letterSpacing: -0.5 },
+  subtitle: { fontSize: 14, color: '#6b7280', lineHeight: 20 },
 
   sectionLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#64748b',
-    letterSpacing: 1,
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#4b5563',
+    letterSpacing: 1.5,
     textTransform: 'uppercase',
-    marginBottom: 8,
-    marginTop: 20,
+    marginBottom: 10,
+    marginTop: 24,
   },
   card: {
-    backgroundColor: '#1e293b',
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: '#111827',
+    borderRadius: 18,
+    padding: 18,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#1f2937',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
   fieldLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#94a3b8',
-    marginBottom: 6,
-    marginTop: 4,
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#6b7280',
+    marginBottom: 8,
+    marginTop: 6,
+    letterSpacing: 0.5,
   },
   input: {
-    backgroundColor: '#0f172a',
+    backgroundColor: '#0d1117',
     borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 10,
-    padding: 13,
-    color: '#f1f5f9',
+    borderColor: '#1f2937',
+    borderRadius: 12,
+    padding: 14,
+    color: '#f9fafb',
     fontSize: 15,
-    marginBottom: 12,
+    marginBottom: 14,
   },
-  inputMono: { fontFamily: 'monospace', letterSpacing: 0.4 },
+  inputMono: { fontFamily: 'monospace', letterSpacing: 0.4, color: '#10b981' },
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 4,
+    marginTop: 8,
     marginBottom: 4,
+    paddingTop: 4,
+    borderTopWidth: 1,
+    borderColor: '#1f2937',
   },
-  switchHint: { fontSize: 11, color: '#475569', marginTop: 2 },
+  switchHint: { fontSize: 11, color: '#4b5563', marginTop: 3 },
 
   feedbackError: {
-    backgroundColor: 'rgba(239,68,68,0.12)',
-    borderRadius: 10,
-    padding: 12,
-    marginTop: 16,
+    backgroundColor: 'rgba(248,113,113,0.08)',
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 18,
     borderWidth: 1,
-    borderColor: 'rgba(239,68,68,0.3)',
+    borderColor: 'rgba(248,113,113,0.2)',
   },
   feedbackErrorText: { color: '#fca5a5', fontSize: 13 },
   feedbackSuccess: {
-    backgroundColor: 'rgba(34,197,94,0.12)',
-    borderRadius: 10,
-    padding: 12,
-    marginTop: 16,
+    backgroundColor: 'rgba(16,185,129,0.08)',
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 18,
     borderWidth: 1,
-    borderColor: 'rgba(34,197,94,0.3)',
+    borderColor: 'rgba(16,185,129,0.2)',
   },
-  feedbackSuccessText: { color: '#86efac', fontSize: 13 },
+  feedbackSuccessText: { color: '#6ee7b7', fontSize: 13 },
 
   saveBtn: {
-    backgroundColor: '#0b7525',
-    borderRadius: 14,
-    paddingVertical: 16,
+    backgroundColor: '#059669',
+    borderRadius: 16,
+    paddingVertical: 17,
     alignItems: 'center',
-    marginTop: 28,
+    marginTop: 32,
+    shadowColor: '#10b981',
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
   },
-  saveBtnDisabled: { opacity: 0.6 },
+  saveBtnDisabled: { opacity: 0.5, shadowOpacity: 0 },
   saveBtnText: { color: '#fff', fontWeight: '800', fontSize: 16, letterSpacing: 0.3 },
 });

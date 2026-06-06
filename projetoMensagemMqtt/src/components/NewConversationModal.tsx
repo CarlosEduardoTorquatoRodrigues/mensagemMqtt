@@ -64,23 +64,31 @@ export function NewConversationModal({ visible, onClose, onCreate }: Props) {
         <TouchableOpacity style={styles.backdrop} onPress={onClose} activeOpacity={1} />
         <View style={styles.sheet}>
           <View style={styles.handle} />
-          <Text style={styles.title}>Nova conversa</Text>
+
+          <View style={styles.titleRow}>
+            <View style={styles.titleIcon}>
+              <Text style={styles.titleIconText}>💬</Text>
+            </View>
+            <Text style={styles.title}>Nova conversa</Text>
+          </View>
+
           <Text style={styles.fieldLabel}>Nome</Text>
           <TextInput
             style={styles.input}
             placeholder="Ex: Time de frontend"
-            placeholderTextColor="#475569"
+            placeholderTextColor="#4b5563"
             value={name}
             onChangeText={setName}
             editable={!creating}
             accessible
             accessibilityLabel="Nome da conversa"
           />
+
           <Text style={styles.fieldLabel}>Tópico MQTT</Text>
           <TextInput
             style={[styles.input, styles.inputMono]}
             placeholder="Ex: equipe/frontend"
-            placeholderTextColor="#475569"
+            placeholderTextColor="#4b5563"
             value={topic}
             onChangeText={setTopic}
             editable={!creating}
@@ -88,11 +96,13 @@ export function NewConversationModal({ visible, onClose, onCreate }: Props) {
             accessible
             accessibilityLabel="Tópico MQTT"
           />
+
           {error ? (
             <View style={styles.errorBox}>
               <Text style={styles.errorText}>⚠ {error}</Text>
             </View>
           ) : null}
+
           <View style={styles.actions}>
             <TouchableOpacity
               style={[styles.btn, styles.btnCancel]}
@@ -131,60 +141,81 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(0,0,0,0.75)',
   },
   sheet: {
-    backgroundColor: '#1e293b',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    backgroundColor: '#111827',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     padding: 24,
-    paddingBottom: 36,
+    paddingBottom: 40,
     borderTopWidth: 1,
-    borderColor: '#334155',
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: '#1f2937',
   },
   handle: {
-    width: 40,
+    width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#475569',
+    backgroundColor: '#374151',
     alignSelf: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
+    gap: 12,
+  },
+  titleIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#064e3b',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(16,185,129,0.25)',
+  },
+  titleIconText: {
+    fontSize: 18,
   },
   title: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#f1f5f9',
-    marginBottom: 20,
+    color: '#f9fafb',
   },
   fieldLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
-    color: '#64748b',
-    letterSpacing: 0.8,
+    color: '#6b7280',
+    letterSpacing: 1,
     textTransform: 'uppercase',
-    marginBottom: 6,
+    marginBottom: 8,
   },
   input: {
-    backgroundColor: '#0f172a',
+    backgroundColor: '#0d1117',
     borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 12,
-    padding: 14,
-    color: '#f1f5f9',
+    borderColor: '#1f2937',
+    borderRadius: 14,
+    padding: 15,
+    color: '#f9fafb',
     fontSize: 15,
-    marginBottom: 16,
+    marginBottom: 18,
   },
   inputMono: {
     fontFamily: 'monospace',
     letterSpacing: 0.5,
+    color: '#10b981',
   },
   errorBox: {
-    backgroundColor: 'rgba(239,68,68,0.12)',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 16,
+    backgroundColor: 'rgba(248,113,113,0.08)',
+    borderRadius: 12,
+    padding: 13,
+    marginBottom: 18,
     borderWidth: 1,
-    borderColor: 'rgba(239,68,68,0.3)',
+    borderColor: 'rgba(248,113,113,0.25)',
   },
   errorText: {
     color: '#fca5a5',
@@ -197,30 +228,36 @@ const styles = StyleSheet.create({
   },
   btn: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: 15,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   btnCancel: {
-    backgroundColor: '#0f172a',
+    backgroundColor: '#0d1117',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#1f2937',
   },
   btnCancelText: {
-    color: '#94a3b8',
+    color: '#9ca3af',
     fontWeight: '700',
     fontSize: 15,
   },
   btnCreate: {
-    backgroundColor: '#0b7525',
+    backgroundColor: '#059669',
+    shadowColor: '#10b981',
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
   },
   btnDisabled: {
-    opacity: 0.6,
+    opacity: 0.55,
+    shadowOpacity: 0,
   },
   btnCreateText: {
     color: '#fff',
-    fontWeight: '700',
+    fontWeight: '800',
     fontSize: 15,
   },
 });

@@ -82,7 +82,7 @@ export default function App() {
   if (loadingSettings) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3b82f6" />
+        <ActivityIndicator size="large" color="#10b981" />
       </SafeAreaView>
     );
   }
@@ -121,11 +121,11 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#0f172a' },
-  container: { flex: 1, backgroundColor: '#0f172a' },
+  safeArea: { flex: 1, backgroundColor: '#0a0f1e' },
+  container: { flex: 1, backgroundColor: '#0a0f1e' },
   loadingContainer: {
     flex: 1,
-    backgroundColor: '#0f172a',
+    backgroundColor: '#0a0f1e',
     alignItems: 'center',
     justifyContent: 'center',
   },

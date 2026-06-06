@@ -139,7 +139,9 @@ export default function ConversationsScreen({
         <View>
           <Text style={styles.title}>Conversas</Text>
           <Text style={styles.subtitle}>
-            {conversations.length === 0 ? 'Nenhuma conversa ainda' : `${conversations.length} conversa${conversations.length > 1 ? 's' : ''}`}
+            {conversations.length === 0
+              ? 'Nenhuma conversa ainda'
+              : `${conversations.length} conversa${conversations.length > 1 ? 's' : ''}`}
           </Text>
         </View>
         <TouchableOpacity
@@ -164,14 +166,16 @@ export default function ConversationsScreen({
       {/* Lista */}
       {loading ? (
         <View style={styles.centered}>
-          <ActivityIndicator color="#3b82f6" size="large" />
+          <ActivityIndicator color="#10b981" size="large" />
           <Text style={styles.loadingText}>Carregando…</Text>
         </View>
       ) : conversations.length === 0 ? (
         <View style={styles.centered}>
-          <Text style={styles.emptyIcon}>💬</Text>
+          <View style={styles.emptyIconWrap}>
+            <Text style={styles.emptyIcon}>💬</Text>
+          </View>
           <Text style={styles.emptyTitle}>Sem conversas</Text>
-          <Text style={styles.emptyHint}>Toque em "+ Nova" para começar.</Text>
+          <Text style={styles.emptyHint}>Toque em "Nova Conversa" para começar.</Text>
         </View>
       ) : (
         <FlatList
@@ -199,6 +203,7 @@ export default function ConversationsScreen({
         accessibilityRole="button"
         accessibilityLabel="Nova conversa"
       >
+        <Text style={styles.fabPlus}>+</Text>
         <Text style={styles.fabText}>Nova Conversa</Text>
       </TouchableOpacity>
 
@@ -215,7 +220,7 @@ export default function ConversationsScreen({
             <TextInput
               style={styles.renameInput}
               placeholder="Novo nome"
-              placeholderTextColor="#475569"
+              placeholderTextColor="#4b5563"
               value={renameText}
               onChangeText={setRenameText}
               autoFocus
@@ -256,99 +261,126 @@ export default function ConversationsScreen({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#2e788171', padding: 20 },
+  container: { flex: 1, backgroundColor: '#0a0f1e', padding: 20 },
 
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 16,
+    marginBottom: 18,
   },
-  title: { fontSize: 28, fontWeight: '800', color: '#f1f5f9' },
-  subtitle: { fontSize: 13, color: '#64748b', marginTop: 2 },
+  title: { fontSize: 30, fontWeight: '800', color: '#f9fafb', letterSpacing: -0.5 },
+  subtitle: { fontSize: 13, color: '#6b7280', marginTop: 3 },
   settingsBtn: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#1e293b',
+    backgroundColor: '#111827',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#1f2937',
   },
-  settingsBtnText: { fontSize: 23 },
+  settingsBtnText: { fontSize: 22 },
 
   errorBox: {
-    backgroundColor: 'rgba(239,68,68,0.12)',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 12,
+    backgroundColor: 'rgba(248,113,113,0.08)',
+    borderRadius: 12,
+    padding: 13,
+    marginBottom: 14,
     borderWidth: 1,
-    borderColor: 'rgba(239,68,68,0.3)',
+    borderColor: 'rgba(248,113,113,0.2)',
   },
   errorText: { color: '#fca5a5', fontSize: 13 },
 
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  loadingText: { color: '#64748b', marginTop: 12, fontSize: 14 },
-  emptyIcon: { fontSize: 48, marginBottom: 12 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: '#f1f5f9', marginBottom: 6 },
-  emptyHint: { fontSize: 14, color: '#64748b' },
+  loadingText: { color: '#6b7280', marginTop: 14, fontSize: 14 },
+  emptyIconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 24,
+    backgroundColor: '#111827',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: '#1f2937',
+  },
+  emptyIcon: { fontSize: 34 },
+  emptyTitle: { fontSize: 18, fontWeight: '700', color: '#f9fafb', marginBottom: 8 },
+  emptyHint: { fontSize: 14, color: '#6b7280', textAlign: 'center', paddingHorizontal: 32 },
 
-  list: { paddingBottom: 100 },
+  list: { paddingBottom: 110 },
 
   fab: {
     position: 'absolute',
     right: 20,
     bottom: 28,
-    backgroundColor: '#0b7525',
-    paddingHorizontal: 22,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#059669',
+    paddingHorizontal: 20,
     paddingVertical: 15,
     borderRadius: 999,
-    shadowColor: '#0b7525',
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 8,
+    gap: 8,
+    shadowColor: '#10b981',
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 10,
   },
-  fabText: { color: '#fff', fontWeight: '800', fontSize: 15, letterSpacing: 0.3 },
+  fabPlus: { color: '#fff', fontSize: 20, fontWeight: '300', lineHeight: 22 },
+  fabText: { color: '#fff', fontWeight: '800', fontSize: 15, letterSpacing: 0.2 },
 
   renameOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: 'rgba(0,0,0,0.8)',
     justifyContent: 'center',
     padding: 24,
   },
   renameSheet: {
-    backgroundColor: '#1e293b',
-    borderRadius: 20,
+    backgroundColor: '#111827',
+    borderRadius: 22,
     padding: 24,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#1f2937',
+    shadowColor: '#000',
+    shadowOpacity: 0.4,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 12,
   },
-  renameTitle: { fontSize: 18, fontWeight: '800', color: '#f1f5f9', marginBottom: 16 },
+  renameTitle: { fontSize: 18, fontWeight: '800', color: '#f9fafb', marginBottom: 18 },
   renameInput: {
-    backgroundColor: '#0f172a',
+    backgroundColor: '#0d1117',
     borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 10,
-    padding: 13,
-    color: '#f1f5f9',
+    borderColor: '#1f2937',
+    borderRadius: 12,
+    padding: 14,
+    color: '#f9fafb',
     fontSize: 15,
-    marginBottom: 20,
+    marginBottom: 22,
   },
   renameActions: { flexDirection: 'row', gap: 12 },
   renameBtn: {
     flex: 1,
-    paddingVertical: 13,
-    borderRadius: 10,
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: 'center',
   },
   renameBtnCancel: {
-    backgroundColor: '#0f172a',
+    backgroundColor: '#0d1117',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#1f2937',
   },
-  renameBtnCancelText: { color: '#94a3b8', fontWeight: '700' },
-  renameBtnConfirm: { backgroundColor: '#0b7525' },
+  renameBtnCancelText: { color: '#9ca3af', fontWeight: '700' },
+  renameBtnConfirm: {
+    backgroundColor: '#059669',
+    shadowColor: '#10b981',
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+  },
   renameBtnConfirmText: { color: '#fff', fontWeight: '700' },
 });
