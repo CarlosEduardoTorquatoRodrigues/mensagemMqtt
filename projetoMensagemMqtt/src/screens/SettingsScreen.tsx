@@ -183,7 +183,7 @@ export function SettingsScreen({ settings, status, onSave, onBack }: Props) {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: '#0a0f1e' },
+  flex: { flex: 1, backgroundColor: '#31adb683' },
   container: { padding: 20, paddingBottom: 48 },
 
   header: { marginBottom: 24 },

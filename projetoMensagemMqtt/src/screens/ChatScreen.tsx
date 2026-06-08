@@ -120,7 +120,7 @@ export default function ChatScreen({
             accessibilityLabel="Limpar histórico de mensagens"
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Text style={styles.clearBtnText}>🗑</Text>
+            <Text style={styles.clearBtnText}>🗑️</Text>
           </TouchableOpacity>
         </View>
 
@@ -210,7 +210,7 @@ export default function ChatScreen({
             accessibilityRole="button"
             accessibilityLabel="Enviar mensagem"
           >
-            <Text style={styles.sendBtnText}>↑</Text>
+            <Text style={styles.sendBtnText}>➡️</Text>
           </TouchableOpacity>
         </View>
 
@@ -220,7 +220,7 @@ export default function ChatScreen({
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: '#0a0f1e' },
+  flex: { flex: 1, backgroundColor: '#31adb683' },
   container: { flex: 1, paddingTop: 20 },
 
   header: {
@@ -254,13 +254,13 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#111827',
+    backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: '#1f2937',
   },
-  clearBtnText: { fontSize: 17 },
+  clearBtnText: { fontSize: 20,  },
 
   statusRow: {
     paddingHorizontal: 16,

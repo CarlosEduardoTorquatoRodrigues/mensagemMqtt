@@ -151,7 +151,7 @@ export default function ConversationsScreen({
           accessibilityRole="button"
           accessibilityLabel="Abrir ajustes"
         >
-          <Text style={styles.settingsBtnText}>⚙</Text>
+          <Text style={styles.settingsBtnText}>⚙️</Text>
         </TouchableOpacity>
       </View>
 
@@ -261,7 +261,7 @@ export default function ConversationsScreen({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0a0f1e', padding: 20 },
+  container: { flex: 1, backgroundColor: '#31adb683', padding: 20 },
 
   header: {
     flexDirection: 'row',
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#111827',
+    backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
