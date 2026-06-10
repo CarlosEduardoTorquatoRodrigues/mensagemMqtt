@@ -203,7 +203,6 @@ export default function ConversationsScreen({
         accessibilityRole="button"
         accessibilityLabel="Nova conversa"
       >
-        <Text style={styles.fabPlus}>+</Text>
         <Text style={styles.fabText}>Nova Conversa</Text>
       </TouchableOpacity>
 
@@ -270,7 +269,7 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   title: { fontSize: 30, fontWeight: '800', color: '#f9fafb', letterSpacing: -0.5 },
-  subtitle: { fontSize: 13, color: '#6b7280', marginTop: 3 },
+  subtitle: { fontSize: 13, color: '#ffffff', marginTop: 3 },
   settingsBtn: {
     width: 44,
     height: 44,
@@ -279,7 +278,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#1f2937',
+    borderColor: '#ffffff',
   },
   settingsBtnText: { fontSize: 22 },
 
@@ -329,7 +328,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     elevation: 10,
   },
-  fabPlus: { color: '#fff', fontSize: 20, fontWeight: '300', lineHeight: 22 },
   fabText: { color: '#fff', fontWeight: '800', fontSize: 15, letterSpacing: 0.2 },
 
   renameOverlay: {

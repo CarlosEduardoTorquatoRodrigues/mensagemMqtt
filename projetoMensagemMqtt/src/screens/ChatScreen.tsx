@@ -106,7 +106,7 @@ export default function ChatScreen({
             accessibilityLabel="Voltar para lista de conversas"
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Text style={styles.backBtnText}>←</Text>
+            <Text style={styles.backBtnText}>⬅</Text>
           </TouchableOpacity>
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle} numberOfLines={1}>{conversation.name}</Text>
@@ -210,7 +210,7 @@ export default function ChatScreen({
             accessibilityRole="button"
             accessibilityLabel="Enviar mensagem"
           >
-            <Text style={styles.sendBtnText}>➡️</Text>
+            <Text style={styles.sendBtnText}>➡</Text>
           </TouchableOpacity>
         </View>
 
@@ -234,11 +234,11 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#111827',
+    backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#1f2937',
+    borderColor: '#ffffff',
   },
   backBtnText: { color: '#10b981', fontSize: 20, fontWeight: '700', lineHeight: 24 },
   headerCenter: { flex: 1, minWidth: 0 },
@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#1f2937',
+    borderColor: '#ffffff',
   },
   clearBtnText: { fontSize: 20,  },
 

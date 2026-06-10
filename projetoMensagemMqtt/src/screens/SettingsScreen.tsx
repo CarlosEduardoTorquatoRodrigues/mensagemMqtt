@@ -80,7 +80,7 @@ export function SettingsScreen({ settings, status, onSave, onBack }: Props) {
               accessibilityRole="button"
               accessibilityLabel="Voltar para conversas"
             >
-              <Text style={styles.backBtnText}>← Voltar</Text>
+              <Text style={styles.backBtnText}>⬅ Voltar</Text>
             </TouchableOpacity>
           ) : null}
           <Text style={styles.title}>Ajustes</Text>
@@ -190,12 +190,12 @@ const styles = StyleSheet.create({
   backBtn: { marginBottom: 16, alignSelf: 'flex-start' },
   backBtnText: { color: '#10b981', fontWeight: '700', fontSize: 14, letterSpacing: 0.2 },
   title: { fontSize: 30, fontWeight: '800', color: '#f9fafb', marginBottom: 6, letterSpacing: -0.5 },
-  subtitle: { fontSize: 14, color: '#6b7280', lineHeight: 20 },
+  subtitle: { fontSize: 14, color: '#ffffff', lineHeight: 20 },
 
   sectionLabel: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#4b5563',
+    color: '#ffffff',
     letterSpacing: 1.5,
     textTransform: 'uppercase',
     marginBottom: 10,
