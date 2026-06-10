@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0a0f1e' },
   loadingContainer: {
     flex: 1,
-    backgroundColor: '#0a0f1e',
+    backgroundColor: '#31adb683',
     alignItems: 'center',
     justifyContent: 'center',
   },

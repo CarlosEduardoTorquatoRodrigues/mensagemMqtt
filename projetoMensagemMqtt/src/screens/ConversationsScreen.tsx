@@ -271,9 +271,9 @@ const styles = StyleSheet.create({
   title: { fontSize: 30, fontWeight: '800', color: '#f9fafb', letterSpacing: -0.5 },
   subtitle: { fontSize: 13, color: '#ffffff', marginTop: 3 },
   settingsBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 55,
+    height: 55,
+    borderRadius: 40,
     backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
